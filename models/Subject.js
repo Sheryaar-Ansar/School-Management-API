@@ -1,6 +1,6 @@
-import mongoose from "mongoose";
+import { model, Schema } from "mongoose";
 
-const subjectSchema = new mongoose.Schema(
+const subjectSchema = new Schema(
   {
     name: { type: String, required: true },
     code: { type: String, unique: true }, 
@@ -8,4 +8,4 @@ const subjectSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model("Subject", subjectSchema);
+export default model("Subject", subjectSchema);

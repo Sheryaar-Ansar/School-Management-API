@@ -1,7 +1,6 @@
-// models/Class.js
-import mongoose from "mongoose";
+import { Schema,model } from "mongoose";
 
-const classSchema = new mongoose.Schema(
+const classSchema = new Schema(
   {
     grade: { type: Number, required: true },
     section: { type: String, required: true },
@@ -14,4 +13,4 @@ const classSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model("Class", classSchema);
+export default model("Class", classSchema);
