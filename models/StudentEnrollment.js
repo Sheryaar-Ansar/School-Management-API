@@ -6,6 +6,7 @@ const studentEnrollmentSchema = new Schema(
     campus: { type: Schema.Types.ObjectId, ref: "Campus", required: true },
     class: { type: Schema.Types.ObjectId, ref: "Class", required: true },
     rollNumber: { type: String, required: true },
+    academicSession: { type: String, required: true },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

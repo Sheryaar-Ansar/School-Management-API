@@ -30,7 +30,7 @@ It also includes **AI-powered recommendations** to enhance learning outcomes and
 ### 📊 Attendance & Exam System
 - Teachers mark attendance daily.
 - Exam results added per subject/class (tests, assessments, midterm).
-- Auto-generate mark sheets.
+- Generate mark sheets.
 
 ### 📢 Real-Time Announcements (via **WebSockets**)
 - **Head Office → All campuses**.
@@ -46,7 +46,7 @@ It also includes **AI-powered recommendations** to enhance learning outcomes and
 - Compare campuses by average results.
 - Attendance trends & subject-wise performance analytics.
 
-### 🤖 AI Integration (Optional)
+### 🤖 AI Integration 
 - Personalized study recommendations for students.
 - OpenAI API / ML model for generating study tips.
 
@@ -57,7 +57,7 @@ It also includes **AI-powered recommendations** to enhance learning outcomes and
 - **Database:** MongoDB (Mongoose + Aggregation Pipelines)  
 - **Realtime:** Socket.IO (announcements, live updates)  
 - **Scheduler:** Node-cron for automated tasks  
-- **AI:** OpenAI API (optional)  
+- **AI:** OpenAI API 
 - **Authentication:** JWT with refresh tokens  
 
 ---
