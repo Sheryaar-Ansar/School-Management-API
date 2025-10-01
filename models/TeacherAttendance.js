@@ -1,17 +1,19 @@
 import { Schema, model } from "mongoose";
 
-const attendanceSchema = new Schema(
+const teacherAttendanceSchema = new Schema(
   {
-    student: { type: Schema.Types.ObjectId, ref: "User" },
+    teacher: { type: Schema.Types.ObjectId, ref: "User" },
     status: {
       type: String,
       enum: ["present", "absent", "leave"],
       required: true,
     },
     campus: { type: Schema.Types.ObjectId, ref: "Campus" },
+    checkIn: { type: Date }, //optional
+    checkOut: { type: Date },  //optional
     date: { type: Date, default: Date.now() },
   },
   { timestamps: true }
 );
 
-export default model("Attendance", attendanceSchema);
+export default model("TeacherAttendance", teacherAttendanceSchema);
