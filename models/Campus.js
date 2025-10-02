@@ -13,7 +13,8 @@ const campusSchema = new mongoose.Schema({
     phone: { type: String },
     email: { type: String }
   },
-   campusAdmin: { type: Schema.Types.ObjectId, ref: "User" } 
+   campusAdmin: { type: Schema.Types.ObjectId, ref: "User" },
+   isActive: {type:Boolean, default: true}
 }, { timestamps: true });
 
 
