@@ -82,6 +82,43 @@ export const addTeacherStudent = async (req, res) => {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
+export const register = async (req, res) => {
+  try {
+    const { name, gender, email, password, contact, address, role, dob, campus } = req.body;
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already registered!" });
+    }
+
+    const user = new User({
+      name,
+      gender,
+      email,
+      password,
+      contact,
+      address,
+      dob,
+      role,
+      campus,
+    });
+
+    await user.save();
+
+    res.status(201).json({
+      message: "User registered successfully!",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
 
 export const login = async (req, res) => {
   try {
