@@ -1,8 +1,9 @@
 import { Schema } from "mongoose";
 import Class from "./Class.js";
 import User from "./User.js";
+import { model, Schema } from "mongoose";
 
-const campusSchema = new mongoose.Schema({
+const campusSchema = new Schema({
   name: { type: String, required: true },
   code: { type: String, unique: true },
   address: { type: String },
