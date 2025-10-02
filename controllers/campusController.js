@@ -25,8 +25,10 @@ export const getAllCampuses = async (req, res) => {
     try {
         const { page = 1, limit = 5 } = req.query
         const skip = parseInt(page - 1) * parseInt(limit)
+        const deletedCampus = await Campus.countDocuments({ isActive: false })
         const totalCampuses = await Campus.countDocuments()
         const campuses = await Campus.aggregate([
+            { $match: {isActive: true} },
             {
                 $lookup: {
                     from: 'classes',
@@ -79,6 +81,7 @@ export const getAllCampuses = async (req, res) => {
         if (!campuses) return res.status(404).json({ error: "Campuses not found" })
         res.json({
             totalCampuses: totalCampuses,
+            inActiveCampuses: deletedCampus,
             page: parseInt(page),
             limit: parseInt(limit),
             campuses

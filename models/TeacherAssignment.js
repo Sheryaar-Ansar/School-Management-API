@@ -3,14 +3,15 @@ import { model, Schema } from "mongoose";
 const teacherAssignmentSchema = new Schema(
   {
     teacher: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    campus: { type: Schema.Types.ObjectId, ref: "Campus", required: true },
-    // campus: [{ type: Schema.Types.ObjectId, ref: "Campus", required: true }],
+    // teacher: [{ type: Schema.Types.ObjectId, ref: "User", required: true }],
+    // campus: { type: Schema.Types.ObjectId, ref: "Campus", required: true },
+    campus: [{ type: Schema.Types.ObjectId, ref: "Campus", required: true }],
 
-    class: { type: Schema.Types.ObjectId, ref: "Class", required: true },
-    // class: [{ type: Schema.Types.ObjectId, ref: "Class", required: true }],
+    // class: { type: Schema.Types.ObjectId, ref: "Class", required: true },
+    class: [{ type: Schema.Types.ObjectId, ref: "Class", required: true }],
 
-    subject: { type: Schema.Types.ObjectId, ref: "Subject", required: true },
-    // subject: [{ type: Schema.Types.ObjectId, ref: "Subject", required: true}],
+    // subject: { type: Schema.Types.ObjectId, ref: "Subject", required: true },
+    subject: [{ type: Schema.Types.ObjectId, ref: "Subject", required: true}],
     
     isActive: { type: Boolean, default: true },
   },

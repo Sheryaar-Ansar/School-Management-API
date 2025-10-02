@@ -1,4 +1,6 @@
 import { Schema } from "mongoose";
+import Class from "./Class.js";
+import User from "./User.js";
 
 const campusSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -19,5 +21,23 @@ const campusSchema = new mongoose.Schema({
 
 
 campusSchema.index({ location: '2dsphere' });
+
+//this will free this code field which means we can create campus with this inactive campus code
+campusSchema.index(
+  { code: 1 },
+  { unique: true, partialFilterExpression: { isActive: true } }
+)
+
+campusSchema.post("findOneAndUpdate", async function (doc) {
+  if (doc && doc.isActive === false) {
+    await Class.updateMany({ campus: doc._id }, { isActive: false })
+
+    await User.updateMany(
+      { campus: doc._id, role: { $in: ["teacher", "student"] } },
+      { isActive: false }
+    );
+  }
+});
+
 
 export default model("Campus", campusSchema)
