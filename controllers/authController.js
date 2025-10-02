@@ -168,13 +168,13 @@ export const getAllUsers = async (req, res) => {
     let users;
 
     if (req.user.role === "super-admin") {
-      users = await User.find().select("-password").populate("campus");
+      users = await User.find().select("-password");
     } 
     else if (req.user.role === "campus-admin") {
       users = await User.find({
         campus: req.user.campus,
         role: { $in: ["teacher", "student"] },
-      }).select("-password").populate("campus");
+      }).select("-password");
     } 
     else {
       return res.status(403).json({ message: "Access denied" });
