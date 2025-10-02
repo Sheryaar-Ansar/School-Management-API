@@ -7,6 +7,7 @@ import {
   updateUser,
   deleteUser,
 } from "../controllers/authController.js";
+import { authenticate, authRole } from "../middlewares/authMiddleware.js";
 const router = express.Router();
 
 router.post("/register", signup);
