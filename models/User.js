@@ -1,13 +1,19 @@
 import { Schema, model } from "mongoose";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 const userSchema = new Schema(
   {
     name: { type: String, required: true },
     gender: { type: String, enum: ["Male", "Female"], required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    contact: { type: Number, required: true },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+    password: { type: String, required: true, min: 6 },
+    contact: { type: String, required: true },
     address: { type: String },
     dob: { type: Date, required: true },
     role: {
@@ -15,9 +21,9 @@ const userSchema = new Schema(
       enum: ["super-admin", "campus-admin", "teacher", "student"],
       default: "student",
     },
-    campus: { type: mongoose.Schema.Types.ObjectId, ref: "Campus" },
+    campus: { type: Schema.Types.ObjectId, ref: "Campus" },
   },
-  { timestaps: true }
+  { timestamps: true }
 );
 
 userSchema.pre("save", async function (next) {
@@ -29,7 +35,5 @@ userSchema.pre("save", async function (next) {
 userSchema.methods.comparePassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
-
-userSchema.index({ email: 1 });
 
 export default model("User", userSchema);
