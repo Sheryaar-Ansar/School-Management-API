@@ -7,9 +7,47 @@ const generateToken = (userId, role) => {
   });
 };
 
-export const signup = async (req, res) => {
+export const registerAdmin = async (req, res) => {
   try {
-    const { name, gender, email, password, contact, address, dob, role, campus } = req.body;
+    const { name, gender, email, password, contact, address, dob, campus } = req.body;
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already registered!" });
+    }
+
+    const user = new User({
+      name,
+      gender,
+      email,
+      password,
+      contact,
+      address,
+      dob,
+      role: "campus-admin",
+      campus,
+    });
+
+    await user.save();
+
+    res.status(201).json({
+      message: "User registered successfully!",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+export const addTeacherStudent = async (req, res) => {
+  try {
+    const { name, gender, email, password, contact, address, role, dob, campus } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -30,8 +68,6 @@ export const signup = async (req, res) => {
 
     await user.save();
 
-    const token = generateToken(user._id, user.role);
-
     res.status(201).json({
       message: "User registered successfully!",
       user: {
@@ -39,8 +75,7 @@ export const signup = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-      },
-      token,
+      }
     });
   } catch (error) {
     console.error(error);
@@ -82,7 +117,7 @@ export const login = async (req, res) => {
 
 export const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select("-password").populate("campus");
+    const user = await User.findById(req.user._id).select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
 
     res.json(user);
@@ -93,10 +128,24 @@ export const getMe = async (req, res) => {
 
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password").populate("campus");
+    let users;
+
+    if (req.user.role === "super-admin") {
+      users = await User.find().select("-password").populate("campus");
+    } 
+    else if (req.user.role === "campus-admin") {
+      users = await User.find({
+        campus: req.user.campus,
+        role: { $in: ["teacher", "student"] },
+      }).select("-password").populate("campus");
+    } 
+    else {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
     res.json(users);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Error fetching users", error: error.message });
   }
 };
 
@@ -105,14 +154,29 @@ export const updateUser = async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
 
-    if (updates.password) {
-      updates.password = await bcrypt.hash(updates.password, 10);
+    const targetUser = await User.findById(id);
+    if (!targetUser) {
+      return res.status(404).json({ message: "User not found" });
     }
 
-    const user = await User.findByIdAndUpdate(id, updates, { new: true }).select("-password");
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (req.user.role === "super-admin") {
+      const user = await User.findByIdAndUpdate(id, updates, { new: true }).select("-password");
+      return res.json({ message: "User updated successfully (super-admin)", user });
+    }
 
-    res.json({ message: "User updated successfully", user });
+    if (req.user.role === "campus-admin") {
+      if (
+        targetUser.campus?.toString() === req.user.campus?.toString() &&
+        ["teacher", "student"].includes(targetUser.role)
+      ) {
+        const user = await User.findByIdAndUpdate(id, updates, { new: true }).select("-password");
+        return res.json({ message: "User updated successfully (campus-admin)", user });
+      } else {
+        return res.status(403).json({ message: "Access denied" });
+      }
+    }
+
+    return res.status(403).json({ message: "Access denied" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -121,10 +185,30 @@ export const updateUser = async (req, res) => {
 export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const user = await User.findByIdAndDelete(id);
-    if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.json({ message: "User deleted successfully" });
+    const targetUser = await User.findById(id);
+    if (!targetUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (req.user.role === "super-admin") {
+      await targetUser.deleteOne();
+      return res.json({ message: "User deleted successfully (super-admin)" });
+    }
+
+    if (req.user.role === "campus-admin") {
+      if (
+        targetUser.campus?.toString() === req.user.campus?.toString() &&
+        ["teacher", "student"].includes(targetUser.role)
+      ) {
+        await targetUser.deleteOne();
+        return res.json({ message: "User deleted successfully (campus-admin)" });
+      } else {
+        return res.status(403).json({ message: "Access denied" });
+      }
+    }
+
+    return res.status(403).json({ message: "Access denied" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
