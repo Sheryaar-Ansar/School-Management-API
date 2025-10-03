@@ -9,7 +9,10 @@ export const createSubject = async (req, res) => {
       description,
       createdBy: req.user._id,
     });
-    res.status(201).json({ message: "Subject created sucessfully!", subject });
+    res.status(201).json({
+      message: "Subject created sucessfully!",
+      subject: { id: subject._id, name: subject.name, code: subject.code },
+    });
   } catch (err) {
     res
       .status(400)
@@ -46,7 +49,10 @@ export const updateSubject = async (req, res) => {
       new: true,
     });
     if (!subject) return res.status(404).json({ message: "Subject not found" });
-    res.json({ message: "Subject updated successfully!", subject });
+    res.json({
+      message: "Subject updated successfully!",
+      subject: { id: subject._id, name: subject.name, code: subject.code, description: subject.description },
+    });
   } catch (err) {
     res
       .status(400)

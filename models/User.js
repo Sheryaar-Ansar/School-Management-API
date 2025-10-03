@@ -22,7 +22,6 @@ const userSchema = new Schema(
       default: "student",
     },
     campus: { type: Schema.Types.ObjectId, ref: "Campus" },
-    campus: { type: mongoose.Schema.Types.ObjectId, ref: "Campus" },
     isActive: { type: Boolean, default: true }
 
   },

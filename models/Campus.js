@@ -1,4 +1,3 @@
-import { Schema } from "mongoose";
 import Class from "./Class.js";
 import User from "./User.js";
 import { model, Schema } from "mongoose";

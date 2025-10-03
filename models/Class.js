@@ -14,7 +14,7 @@ const classSchema = new Schema(
     classTeacher: { type: Schema.Types.ObjectId, ref: "User" },
     isActive: { type: Boolean, default: true },
     createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "User", // Campus Admin
     },
   },

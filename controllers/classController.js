@@ -6,12 +6,21 @@ export const createClass = async (req, res) => {
     const newClass = await Class.create({
       grade,
       section,
-      campus: req.user.campusId,
+      campus: req.user.campus,
       subjects,
       classTeacher,
       createdBy: req.user._id,
     });
-    res.status(201).json(newClass);
+    res.status(201).json({
+      message: "Class created successfully",
+      class: {
+        id: newClass._id,
+        grade: newClass.grade,
+        section: newClass.section,
+        subjects: newClass.subjects,
+        classTeacher: newClass.classTeacher,
+      },
+    });
   } catch (err) {
     res
       .status(400)
@@ -22,12 +31,28 @@ export const createClass = async (req, res) => {
 export const getClasses = async (req, res) => {
   try {
     const classes = await Class.find({
-      campus: req.user.campusId,
+      campus: req.user.campus,
       isActive: true,
     })
       .populate("subjects")
       .populate("classTeacher", "name email contact");
     res.json(classes);
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Error fetching classes", error: err.message });
+  }
+};
+
+export const getClassById = async (req, res) => {
+  try {
+    const singleClass = await Class.findById(req.params.id)
+      .populate("subjects")
+      .populate("classTeacher", "name email contact");
+    if (!singleClass)
+      return res.status(404).json({ message: "Class not found" });
+
+    res.json(singleClass);
   } catch (err) {
     res
       .status(500)
@@ -44,7 +69,16 @@ export const updateClass = async (req, res) => {
     );
     if (!updatedClass)
       return res.status(404).json({ message: "Class not found" });
-    res.json(updatedClass);
+    res.json({
+      message: "Class updated successfully",
+      class: {
+        id: updatedClass._id,
+        grade: updatedClass.grade,
+        section: updatedClass.section,
+        subjects: updatedClass.subjects,
+        classTeacher: updatedClass.classTeacher,
+      },
+    });
   } catch (err) {
     res
       .status(400)
@@ -61,7 +95,7 @@ export const deleteClass = async (req, res) => {
       { isActive: false },
       { new: true }
     );
-    res.json({ message: "Class deleted (soft)"});
+    res.json({ message: "Class deleted (soft)" });
   } catch (err) {
     res
       .status(500)
