@@ -3,7 +3,9 @@ import "dotenv/config";
 import connectDB from "./db/index.js";
 import authRoutes from "./routes/authRoutes.js"
 
+import classRoutes from './routes/classRoutes.js'
 import campusRoutes from './routes/campusRoutes.js'
+import subjectRoutes from './routes/subjectRoutes.js'
 
 const app = express();
 
@@ -13,6 +15,8 @@ app.use(express.json());
 // API Routes
 app.use("/api/auth", authRoutes)
 app.use('/api/campuses', campusRoutes)
+app.use('/api/classes', classRoutes)
+app.use('/api/subjects', subjectRoutes)
 
 
 const port = process.env.PORT || 3000;

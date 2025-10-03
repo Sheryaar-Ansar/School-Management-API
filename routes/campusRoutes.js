@@ -1,4 +1,4 @@
-import { createCampus, getAllCampuses, getCampusById, updateCampusDetailsById, deleteCampusById } from '../controllers/campusController'
+import { createCampus, getAllCampuses, getCampusById, updateCampusDetailsById, deleteCampusById } from '../controllers/campusController.js'
 import express from 'express'
 const router = express.Router()
 
