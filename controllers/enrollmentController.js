@@ -88,3 +88,28 @@ export const deleteTeacher = async (req, res) => {
         res.status(500).json({error: error.message})
     }
 } 
+
+export const getTeachers = async (req, res) => {
+    try {
+        const { campusId, isActive, page = 1, limit = 5, sortBy = 'name', order = 'asc' } = req.query
+        let campusMatch = {}
+        if (campusId) campusMatch.campus = campusId
+        if (typeof isActive !== "undefined") campusMatch.isActive = isActive === 'true'
+        const skip = (parseInt(page) - 1) * parseInt(limit)
+
+        const totalActiveTeachers = await TeacherAssignment.countDocuments({ isActive: true })
+        const teachers = await TeacherAssignment.find(campusMatch)
+            .skip(skip)
+            .limit(parseInt(limit))
+            .sort({ [sortBy]: order === 'asc' ? 1 : -1 })
+
+        res.json({
+            totalActiveTeachers,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            data: teachers
+        })
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+}
