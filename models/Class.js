@@ -9,9 +9,14 @@ const classSchema = new Schema(
       ref: "Campus",
       required: true,
     },
+    subjects: [{ type: Schema.Types.ObjectId, ref: "Subject" }],
+    // students: [{ type: Schema.Types.ObjectId, ref: "User" }],
     classTeacher: { type: Schema.Types.ObjectId, ref: "User" },
-    isActive: { type: Boolean, default: true }
-
+    isActive: { type: Boolean, default: true },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // Campus Admin
+    },
   },
   { timestamps: true }
 );
