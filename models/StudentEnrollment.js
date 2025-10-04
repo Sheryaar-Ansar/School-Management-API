@@ -14,7 +14,7 @@ const studentEnrollmentSchema = new Schema(
 
 // Index -> For uniqueness
 studentEnrollmentSchema.index(
-  { student: 1, campus: 1, class: 1 },
+  { student: 1, campus: 1, class: 1, rollNumber: 1 },
   { unique: true }
 );
 

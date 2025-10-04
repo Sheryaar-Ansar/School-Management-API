@@ -2,15 +2,16 @@ import { Schema, model } from "mongoose";
 
 const studentAttendanceSchema = new Schema(
   {
-    student: { type: Schema.Types.ObjectId, ref: "User" },
+    enrollment: { type: Schema.Types.ObjectId, ref: "StudentEnrollment",required:true },
     status: {
       type: String,
       enum: ["present", "absent", "leave"],
       required: true,
     },
-    class: { type: Schema.Types.ObjectId, ref: "Class" },
-    campus: { type: Schema.Types.ObjectId, ref: "Campus" },
+    class: { type: Schema.Types.ObjectId, ref: "Class",required:true  },
+    campus: { type: Schema.Types.ObjectId, ref: "Campus",required:true  },
     date: { type: Date, default: Date.now() },
+    markedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
 );
