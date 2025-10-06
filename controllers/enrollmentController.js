@@ -177,7 +177,7 @@ export const deleteStudentEnrollment = async (req,res ) => {
         res.status(500).json({ error: error.message })
     }
 }
-export const getEnrollments = async (req, res) => {
+export const getStudentEnrollments = async (req, res) => {
     try {
         const { campusId, classId, isActive, page = 1, limit = 5, sortBy = 'createdAt', order = 'asc' } = req.query
         let filter = {}
