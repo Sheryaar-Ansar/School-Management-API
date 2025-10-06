@@ -2,6 +2,9 @@ import StudentEnrollment from '../models/StudentEnrollment.js'
 import TeacherAssignment from '../models/TeacherAssignment.js'
 import Assignment from '../models/Assignment.js'
 
+//----------------------------------------------------------------------
+// --- Teacher Assignment Controllers -- // 
+//----------------------------------------------------------------------
 
 export const assignTeacher = async (req, res) => {
     try {
@@ -110,6 +113,88 @@ export const getTeachers = async (req, res) => {
             data: teachers
         })
     } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+}
+//----------------------------------------------------------------------
+// --- Student Enrollment Controllers -- //
+//----------------------------------------------------------------------
+
+export const enrollStudent = async (req,res) => {
+    try {
+        const { studentId, campusId, classId, rollNumber, academicSession } = req.body
+
+        const existStudent = await StudentEnrollment.findOne({
+            student: studentId,
+            campus: campusId,
+            class: classId
+        })
+        if(existStudent) return res.status(400).json({ error: "Student already enrolled in the class" })
+        const newEnrollment = await StudentEnrollment.create({
+            student: studentId,
+            campus: campusId,
+            class: classId,
+            academicSession: academicSession,
+            rollNumber: rollNumber
+        })
+        res.status(201).json({ message: "Student enrolled successfully", data: newEnrollment })
+    } catch (error) {
+        res.status(400).json({ error: error.message })
+    }
+}
+export const updateStudentEnrollment = async (req, res) => {
+    try {
+        const studentId = req.params.id
+        const { campusId, classId, rollNumber, academicSession } = req.body
+        const updatedEnrollmentData = { campusId, classId, rollNumber, academicSession }
+        if (!studentId) return res.status(400).json({ error: "Student ID is required" })
+        const existStudent = await StudentEnrollment.findById(studentId)
+        if(!existStudent) return res.status(404).json({ error: "Student enrollment not found" })
+        const updatedEnrollment = await StudentEnrollment.findByIdAndUpdate(
+            studentId,
+            { $set: updatedEnrollmentData },
+            { new: true, runValidators: true }
+        )
+        res.json({ message: "Student enrollment updated", data: updatedEnrollment })
+    } catch (error) {
+        res.status(400).json({ error: error.message })
+    }
+}
+
+export const deleteStudentEnrollment = async (req,res ) => {
+    try {
+        const studentId = req.params.id
+        if(!studentId) return res.status(400).json({ error: "Student ID is required" })
+        const existStudent = await StudentEnrollment.findById(studentId)
+        if(!existStudent) return res.status(404).json({ error: "Student enrollment not found" })
+        await StudentEnrollment.findByIdAndUpdate(
+            studentId,
+            { isActive: false },
+            { new: true }
+        )
+        res.json({ message: "Student enrollment deleted successfully" })
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+}
+export const getEnrollments = async (req, res) => {
+    try {
+        const { campusId, classId, isActive, page = 1, limit = 5, sortBy = 'createdAt', order = 'asc' } = req.query
+        let filter = {}
+        if (campusId) filter.campus = campusId
+        if (classId) filter.class = classId
+        if (typeof isActive !== "undefined") filter.isActive = isActive === 'true'
+        const skip = (parseInt(page) - 1) * parseInt(limit)
+        const totalEnrollments = await StudentEnrollment.countDocuments(filter)
+        const enrollments = await StudentEnrollment.find(filter).skip(skip).limit(parseInt(limit)).sort({ [sortBy]: order === 'asc' ? 1 : -1 }).populate('student', 'name').populate('campus', 'name').populate('class', 'name')
+        res.json({
+            totalEnrollments,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            data: enrollments
+        })
+    }
+    catch (error) {
         res.status(500).json({ error: error.message })
     }
 }
