@@ -22,7 +22,7 @@ export const assignTeacher = async (req, res) => {
             { new: true, upsert: true }
         ).populate('teacher', 'name').populate('assignments')
         res.status(201).json({
-            message: `${assignTeacher.teacher.name} assigned to ${assignment.campus.name}`
+            message: `${assignTeacher.teacher.name} assigned to campus successfully`
         })
     } catch (error) {
         res.status(400).json({ error: error.message })
@@ -91,7 +91,7 @@ export const deleteTeacher = async (req, res) => {
         res.status(500).json({error: error.message})
     }
 } 
-
+//any campus-admin can assign other campus teachers (will be fixed soon)
 export const getTeachers = async (req, res) => {
     try {
         const { campusId, isActive, page = 1, limit = 5, sortBy = 'name', order = 'asc' } = req.query

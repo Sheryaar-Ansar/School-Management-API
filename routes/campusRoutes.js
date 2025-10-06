@@ -3,11 +3,11 @@ import { authenticate, authRole } from '../middlewares/authMiddleware.js'
 import express from 'express'
 const router = express.Router()
 
-router.post('/', createCampus)
-router.get('/', getAllCampuses)
-router.get('/details', authenticate, authRole('campus-admin'), getCampusDetails)
-router.get('/:id', getCampusById)
-router.patch('/:id', updateCampusDetailsById)
-router.post('/:id/delete', deleteCampusById)
+router.post('/', authenticate, authRole(['super-admin']), createCampus)
+router.get('/', authenticate, authRole(['super-admin']), getAllCampuses)
+router.get('/details', authenticate, authRole(['campus-admin', 'super-admin']), getCampusDetails)
+router.get('/:id', authenticate, authRole(['super-admin']), getCampusById)
+router.patch('/:id', authenticate, authRole(['super-admin']), updateCampusDetailsById)
+router.post('/:id/delete', authenticate, authRole(['super-admin']), deleteCampusById)
 
 export default router

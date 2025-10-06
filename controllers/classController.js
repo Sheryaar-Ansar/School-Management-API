@@ -1,12 +1,16 @@
+import Campus from "../models/Campus.js";
 import Class from "../models/Class.js";
+
 
 export const createClass = async (req, res) => {
   try {
-    const { grade, section, subjects, classTeacher } = req.body;
+    console.log("req.user", req.user);
+    
+    const { grade, section, subjects, classTeacher, campus } = req.body;
     const newClass = await Class.create({
       grade,
       section,
-      campus: req.user.campus,
+      campus,
       subjects,
       classTeacher,
       createdBy: req.user._id,
@@ -28,19 +32,47 @@ export const createClass = async (req, res) => {
   }
 };
 
-export const getClasses = async (req, res) => {
+
+
+export const getAllClasses = async (req, res) => {
   try {
-    const classes = await Class.find({
-      campus: req.user.campus,
-      isActive: true,
-    })
-      .populate("subjects")
-      .populate("classTeacher", "name email contact");
-    res.json(classes);
-  } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Error fetching classes", error: err.message });
+    const { role, _id } = req.user;
+    const { includeInactive } = req.query; // e.g. ?includeInactive=true
+
+    let filter = {};
+
+    if (role === "campus-admin") {
+      const campus = await Campus.findOne({ campusAdmin: _id });
+      if (!campus) {
+        return res.status(404).json({ error: "No campus assigned to this admin" });
+      }
+
+      filter.campus = campus._id;
+      filter.isActive = true; // campus-admins see only active
+    }
+
+    if (role === "super-admin") {
+      if (!includeInactive) {
+        filter.isActive = true;
+      }
+    }
+
+    const classes = await Class.find(filter)
+      .populate("campus", "name code isActive")
+      .populate("classTeacher", "name email role")
+      .populate("subjects", "name code")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({
+      role,
+      count: classes.length,
+      filtersApplied: filter,
+      data: classes,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: error.message });
   }
 };
 

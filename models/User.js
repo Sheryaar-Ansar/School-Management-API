@@ -1,4 +1,4 @@
-import { Schema, model } from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 import bcrypt from "bcryptjs";
 
 const userSchema = new Schema(
@@ -21,7 +21,8 @@ const userSchema = new Schema(
       enum: ["super-admin", "campus-admin", "teacher", "student"],
       default: "student",
     },
-    isActive: { type: Boolean, default: true }
+    isActive: { type: Boolean, default: true },
+    createdBy: {type: mongoose.Schema.Types.ObjectId, ref: 'User'}
 
   },
   { timestamps: true }

@@ -10,11 +10,12 @@ const generateToken = (userId, role) => {
 export const registerAdmin = async (req, res) => {
   try {
     const { name, gender, email, password, contact, address, dob } = req.body;
-
+    const superAdmin = req.user
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already registered!" });
     }
+    if(req.user.role !== "super-admin") return res.status(403).json({error: 'Forbidden: You dont have permission for this action'})
 
     const user = new User({
       name,
@@ -25,6 +26,7 @@ export const registerAdmin = async (req, res) => {
       address,
       dob,
       role: "campus-admin",
+      createdBy: superAdmin
     });
 
     await user.save();
@@ -47,12 +49,12 @@ export const registerAdmin = async (req, res) => {
 export const addTeacherStudent = async (req, res) => {
   try {
     const { name, gender, email, password, contact, address, role, dob } = req.body;
-
+    const campusAdmin = req.user
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already registered!" });
     }
-
+    if(req.user.role !== 'super-admin' && req.user.role !== 'campus-admin') return res.status(403).json({error: 'Forbidden: You dont have permission for this action'})
     const user = new User({
       name,
       gender,
@@ -62,6 +64,7 @@ export const addTeacherStudent = async (req, res) => {
       address,
       dob,
       role,
+      createdBy: campusAdmin
     });
 
     await user.save();
@@ -165,13 +168,13 @@ export const getAllUsers = async (req, res) => {
     let users;
 
     if (req.user.role === "super-admin") {
-      users = await User.find().select("-password");
+      users = await User.find().select("-password").populate('createdBy', 'name email role');
     } 
     else if (req.user.role === "campus-admin") {
       users = await User.find({
         campus: req.user.campus,
         role: { $in: ["teacher", "student"] },
-      }).select("-password");
+      }).select("-password").populate('createdBy', 'name email role');
     } 
     else {
       return res.status(403).json({ message: "Access denied" });

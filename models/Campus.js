@@ -4,18 +4,18 @@ import { model, Schema } from "mongoose";
 
 const campusSchema = new Schema({
   name: { type: String, required: true },
-  code: { type: String, unique: true },
-  address: { type: String },
-  city: { type: String },
+  code: { type: String, required: true },
+  address: { type: String, required: true },
+  city: { type: String, required: true },
   location: {
     type: { type: String, enum: ['Point'], default: 'Point' },
     coordinates: { type: [Number], default: [0,0] }
   },
   contact: {
-    phone: { type: String },
-    email: { type: String }
+    phone: { type: String, required: true },
+    email: { type: String, required: true }
   },
-   campusAdmin: { type: Schema.Types.ObjectId, ref: "User" },
+   campusAdmin: { type: Schema.Types.ObjectId, ref: "User", required: true },
    isActive: {type:Boolean, default: true}
 }, { timestamps: true });
 

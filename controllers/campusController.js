@@ -100,7 +100,7 @@ export const getCampusById = async (req, res) => {
     try {
         const { id } = req.params
         const campus = await Campus.aggregate([
-            { $match: { _id: mongoose.Types.ObjectId(id) } },
+            { $match: { _id: new mongoose.Types.ObjectId(id) } },
             {
                 $lookup: {
                     from: 'classes',
@@ -185,55 +185,87 @@ export const deleteCampusById = async (req,res) => {
 
 // Returns campus details (teachers & students) for the campus the authenticated campus-admin belongs to
 export const getCampusDetails = async (req, res) => {
-    try {
-        const user = req.user
-        if (!user) return res.status(401).json({ error: 'Unauthorized' })
-        if (user.role !== 'campus-admin') return res.status(403).json({ error: 'Forbidden: only campus-admin can access this resource' })
-        const campusId = user.campus
-        if (!campusId) return res.status(400).json({ error: 'No campus assigned to this admin' })
-
-        const campus = await Campus.aggregate([
-            { $match: { _id: mongoose.Types.ObjectId(campusId) } },
-            {
-                $lookup: {
-                    from: 'classes',
-                    localField: '_id',
-                    foreignField: 'campus',
-                    as: 'classes'
-                }
-            },
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: '_id',
-                    foreignField: 'campus',
-                    as: 'users'
-                }
-            },
-            {
-                $addFields: {
-                    teachers: {
-                        $filter: {
-                            input: '$users',
-                            as: 't',
-                            cond: { $eq: ['$$t.role', 'teacher'] }
-                        }
-                    },
-                    students: {
-                        $filter: {
-                            input: '$users',
-                            as: 's',
-                            cond: { $eq: ['$$s.role', 'student'] }
-                        }
-                    }
-                }
-            },
-            { $project: { users: 0 } }
-        ])
-
-        if (!campus.length) return res.status(404).json({ error: 'Campus not found' })
-        res.json(campus[0])
-    } catch (error) {
-        res.status(500).json({ error: error.message })
+  try {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized" });
     }
-}
+
+    const { role, _id } = user;
+    const { campusId: queryCampusId, isActive } = req.query;
+
+    let campusId;
+
+    // 🔹 SUPER ADMIN — can access all or one
+    if (role === "super-admin") {
+      campusId = queryCampusId || req.params.id || null;
+    }
+
+    // 🔹 CAMPUS ADMIN — only their own campus
+    if (role === "campus-admin") {
+      const campus = await Campus.findOne({ campusAdmin: _id }).select("_id");
+      if (!campus) {
+        return res.status(404).json({ error: "No campus assigned to this admin" });
+      }
+      campusId = campus._id;
+    }
+
+    // 🔹 Filter setup
+    const matchStage = {};
+    if (campusId) matchStage._id = new mongoose.Types.ObjectId(campusId);
+    if (isActive === "true") matchStage.isActive = true;
+    if (isActive === "false") matchStage.isActive = false;
+
+    // 🔹 Aggregation: fetch campus/campuses + classes + users
+    const campusDetails = await Campus.aggregate([
+      { $match: matchStage },
+      {
+        $lookup: {
+          from: "classes",
+          localField: "_id",
+          foreignField: "campus",
+          as: "classes",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "campus",
+          as: "users",
+        },
+      },
+      {
+        $addFields: {
+          teachers: {
+            $filter: {
+              input: "$users",
+              as: "u",
+              cond: { $eq: ["$$u.role", "teacher"] },
+            },
+          },
+          students: {
+            $filter: {
+              input: "$users",
+              as: "u",
+              cond: { $eq: ["$$u.role", "student"] },
+            },
+          },
+        },
+      },
+      { $project: { users: 0 } },
+    ]);
+
+    if (!campusDetails.length) {
+      return res.status(404).json({ error: "Campus not found" });
+    }
+
+    // 🔹 Return single or multiple based on result
+    res.json(
+      campusDetails.length === 1 ? campusDetails[0] : { count: campusDetails.length, data: campusDetails }
+    );
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+};
