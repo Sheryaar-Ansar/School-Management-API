@@ -17,3 +17,5 @@ router.post('/enroll-student', enrollStudent)
 router.get('/student-enrollments', getStudentEnrollments)
 router.patch('/enroll-student/:id', updateStudentEnrollment)
 router.post('/enroll-student/:id/delete', deleteStudentEnrollment)
+
+export default router

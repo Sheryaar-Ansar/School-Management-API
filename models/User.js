@@ -21,7 +21,6 @@ const userSchema = new Schema(
       enum: ["super-admin", "campus-admin", "teacher", "student"],
       default: "student",
     },
-    campus: { type: Schema.Types.ObjectId, ref: "Campus" },
     isActive: { type: Boolean, default: true }
 
   },

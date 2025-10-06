@@ -9,7 +9,7 @@ const generateToken = (userId, role) => {
 
 export const registerAdmin = async (req, res) => {
   try {
-    const { name, gender, email, password, contact, address, dob, campus } = req.body;
+    const { name, gender, email, password, contact, address, dob } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -25,7 +25,6 @@ export const registerAdmin = async (req, res) => {
       address,
       dob,
       role: "campus-admin",
-      campus,
     });
 
     await user.save();
@@ -47,7 +46,7 @@ export const registerAdmin = async (req, res) => {
 
 export const addTeacherStudent = async (req, res) => {
   try {
-    const { name, gender, email, password, contact, address, role, dob, campus } = req.body;
+    const { name, gender, email, password, contact, address, role, dob } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -63,7 +62,6 @@ export const addTeacherStudent = async (req, res) => {
       address,
       dob,
       role,
-      campus,
     });
 
     await user.save();
@@ -84,7 +82,7 @@ export const addTeacherStudent = async (req, res) => {
 };
 export const register = async (req, res) => {
   try {
-    const { name, gender, email, password, contact, address, role, dob, campus } = req.body;
+    const { name, gender, email, password, contact, address, role, dob } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -100,7 +98,6 @@ export const register = async (req, res) => {
       address,
       dob,
       role,
-      campus,
     });
 
     await user.save();
