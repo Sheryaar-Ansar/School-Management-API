@@ -9,6 +9,7 @@ import User from '../models/User.js'
 //----------------------------------------------------------------------
 
 //any campus-admin can assign other campus teachers (will be fixed soon)
+// FIXED
 export const assignTeacher = async (req, res) => {
     try {
         const { teacherId, campusId, classId, subjectId } = req.body
