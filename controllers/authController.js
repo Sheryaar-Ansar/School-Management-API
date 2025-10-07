@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import Campus from "../models/Campus.js";
 
 const generateToken = (userId, role) => {
   return jwt.sign({ userId, role }, process.env.JWT_SECRET, {
@@ -165,26 +166,40 @@ export const getMe = async (req, res) => {
 
 export const getAllUsers = async (req, res) => {
   try {
-    let users;
+    const { role, _id } = req.user;
+    let users = [];
 
-    if (req.user.role === "super-admin") {
-      users = await User.find().select("-password").populate('createdBy', 'name email role');
-    } 
-    else if (req.user.role === "campus-admin") {
-      users = await User.find({
-        campus: req.user.campus,
-        role: { $in: ["teacher", "student"] },
-      }).select("-password").populate('createdBy', 'name email role');
-    } 
-    else {
-      return res.status(403).json({ message: "Access denied" });
+    if (role === "super-admin") {
+      users = await User.find()
+        .select("-password")
+        .populate("createdBy", "name email role")
     }
 
-    res.json(users);
+    else if (role === "campus-admin") {
+      const campus = await Campus.findOne({ campusAdmin: _id }).select("_id")
+
+      if (!campus) {
+        return res.status(404).json({ message: "No campus assigned to this admin" })
+      }
+
+      users = await User.find({
+        campus: campus._id, 
+        role: { $in: ["teacher", "student"] },
+      })
+        .select("-password")
+        .populate("createdBy", "name email role")
+    }
+
+    else {
+      return res.status(403).json({ message: "Access denied" })
+    }
+
+    res.json(users)
   } catch (error) {
-    res.status(500).json({ message: "Error fetching users", error: error.message });
+    console.error(error)
+    res.status(500).json({ message: "Error fetching users", error: error.message })
   }
-};
+}
 
 export const updateUser = async (req, res) => {
   try {

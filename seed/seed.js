@@ -23,27 +23,7 @@ const seed = async () => {
       role: "super-admin",
     });
 
-    // Campus A
-    const campusA = await Campus.create({
-      name: "Campus A",
-      code: "CAMP-A",
-      address: "Main Street, Karachi",
-      city: "Karachi",
-      location: { type: "Point", coordinates: [67.0011, 24.8607] },
-      contact: { phone: "021-111222333", email: "campusA@school.com" },
-    });
-
-    // Campus B
-    const campusB = await Campus.create({
-      name: "Campus B",
-      code: "CAMP-B",
-      address: "Mall Road, Lahore",
-      city: "Lahore",
-      location: { type: "Point", coordinates: [74.3587, 31.5204] },
-      contact: { phone: "042-222333444", email: "campusB@school.com" },
-    });
-
-    // Campus Admins
+    // Campus Admins (create first so Campus can be created with required campusAdmin)
     const campusAdminA = await User.create({
       name: "Admin A",
       gender: "Male",
@@ -53,7 +33,6 @@ const seed = async () => {
       address: "Karachi",
       dob: new Date("1985-05-15"),
       role: "campus-admin",
-      campus: campusA._id,
     });
 
     const campusAdminB = await User.create({
@@ -65,14 +44,35 @@ const seed = async () => {
       address: "Lahore",
       dob: new Date("1988-07-20"),
       role: "campus-admin",
-      campus: campusB._id,
     });
 
-    // Assign campusAdmin ref in Campus
-    campusA.campusAdmin = campusAdminA._id;
-    campusB.campusAdmin = campusAdminB._id;
-    await campusA.save();
-    await campusB.save();
+    // Campus A
+    const campusA = await Campus.create({
+      name: "Campus A",
+      code: "CAMP-A",
+      address: "Main Street, Karachi",
+      city: "Karachi",
+      location: { type: "Point", coordinates: [67.0011, 24.8607] },
+      contact: { phone: "021-111222333", email: "campusA@school.com" },
+      campusAdmin: campusAdminA._id
+    });
+
+    // Campus B
+    const campusB = await Campus.create({
+      name: "Campus B",
+      code: "CAMP-B",
+      address: "Mall Road, Lahore",
+      city: "Lahore",
+      location: { type: "Point", coordinates: [74.3587, 31.5204] },
+      contact: { phone: "042-222333444", email: "campusB@school.com" },
+      campusAdmin: campusAdminB._id
+    });
+
+    // link admin -> campus
+    campusAdminA.campus = campusA._id;
+    campusAdminB.campus = campusB._id;
+    await campusAdminA.save();
+    await campusAdminB.save();
 
     // Teachers + Students in Campus A
     await User.create({
