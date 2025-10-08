@@ -3,7 +3,7 @@ import { Schema, model } from "mongoose";
 //  This is exam creation in db (Evaluation Type)
 const examSchema = new Schema(
   {
-    name: { type: String, required: true },
+    // name: { type: String, required: true },
     term: {
       type: String,
       enum: ["FirstTerm", "SecondTerm"],
