@@ -196,12 +196,10 @@ export const getCampusDetails = async (req, res) => {
 
     let campusId;
 
-    // 🔹 SUPER ADMIN — can access all or one
     if (role === "super-admin") {
       campusId = queryCampusId || req.params.id || null;
     }
 
-    // 🔹 CAMPUS ADMIN — only their own campus
     if (role === "campus-admin") {
       const campus = await Campus.findOne({ campusAdmin: _id }).select("_id");
       if (!campus) {
@@ -210,13 +208,11 @@ export const getCampusDetails = async (req, res) => {
       campusId = campus._id;
     }
 
-    // 🔹 Filter setup
     const matchStage = {};
     if (campusId) matchStage._id = new mongoose.Types.ObjectId(campusId);
     if (isActive === "true") matchStage.isActive = true;
     if (isActive === "false") matchStage.isActive = false;
 
-    // 🔹 Aggregation: fetch campus/campuses + classes + users
     const campusDetails = await Campus.aggregate([
       { $match: matchStage },
       {
@@ -259,8 +255,6 @@ export const getCampusDetails = async (req, res) => {
     if (!campusDetails.length) {
       return res.status(404).json({ error: "Campus not found" });
     }
-
-    // 🔹 Return single or multiple based on result
     res.json(
       campusDetails.length === 1 ? campusDetails[0] : { count: campusDetails.length, data: campusDetails }
     );
