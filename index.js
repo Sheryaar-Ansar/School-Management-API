@@ -10,6 +10,7 @@ import studentAttendanceRoutes from './routes/studentAttendanceRoutes.js'
 import teacherAttendanceRoutes from './routes/teacherAttendanceRoutes.js'
 import enrollmentRoutes from './routes/enrollmentRoutes.js'
 import examRoutes from './routes/examRoutes.js'
+import scoreRoutes from './routes/scoreRoutes.js'
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use("/api/attendance/students", studentAttendanceRoutes);
 app.use("/api/attendance/teachers", teacherAttendanceRoutes);
 app.use('/api/enrollments', enrollmentRoutes)
 app.use('/api/exams', examRoutes)
+app.use('/api/score', scoreRoutes)
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
