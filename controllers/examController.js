@@ -1,9 +1,10 @@
-import Exam from "../models/Exam";
-import Campus from "../models/Campus";
+import Exam from "../models/Exam.js";
+import Campus from "../models/Campus.js";
+import mongoose from "mongoose";
 
 export const createExam = async (req,res) => {
     try {
-        const { name, term, academicSession, classId, subjectId, campusId, totalMarks, type } = req.body;
+        const { term, academicSession, classId, subjectId, campusId, totalMarks, type } = req.body;
         const { role, _id: userId } = req.user;
 
         if (role !== "campus-admin" && role !== "super-admin") {
@@ -11,7 +12,7 @@ export const createExam = async (req,res) => {
         }
         let campusData = {};
         if (role === "campus-admin") {
-            campusData = await Campus.findById({campusAdmin: userId});
+            campusData = await Campus.findOne({campusAdmin: userId});
             if(campusData._id.toString() !== campusId){
                 return res.status(403).json({ message: "You can only create exams for your own campus" });
             }
@@ -19,8 +20,19 @@ export const createExam = async (req,res) => {
         else if(role !== "super-admin"){
             res.status(403).json({ message: "Only admins can perform this action" });
         }
+        const existingExam = await Exam.findOne({
+            term,
+            academicSession,
+            class: classId,
+            subject: subjectId,
+            campus: campusId,
+            type
+        })
+        if(existingExam){
+            return res.status(400).json({ error: "Exam with the same term, academic session, class, subject, campus, and type already exists" })
+        }
+
         const newExam = await Exam.create({
-            name,
             term,
             academicSession,
             class: classId,
@@ -55,7 +67,7 @@ export const getAllExams = async (req,res) => {
         }
         const skip = (parseInt(page - 1)) * parseInt(limit)
         const exams = await Exam.find(filter)
-            .populate("class", "name")
+            .populate("class", "grade section")
             .populate("subject", "name")
             .populate("campus", "name")
             .skip(skip)
@@ -76,15 +88,20 @@ export const getAllExams = async (req,res) => {
 export const updateExam = async (req,res) => {
     try {
         const { examId } = req.params
-        const { name, term, academicSession, classId, subjectId, campusId, totalMarks, type } = req.body
+        const { term, academicSession, classId, subjectId, campusId, totalMarks, type } = req.body
         const { role, _id: userId } = req.user
+
+        const exam = await Exam.findById(examId)
+        if (!exam) {
+            return res.status(404).json({ message: "Exam not found" })
+        }
         if (role !== "campus-admin" && role !== "super-admin") {
             return res.status(403).json({ message: "Only admins can perform this action" })
         }
         let campusData = {};
         if (role === "campus-admin") {
-            campusData = await Campus.findById({campusAdmin: userId})
-            if(campusData._id.toString() !== campusId){
+            campusData = await Campus.findOne({campusAdmin: userId})
+            if(campusData._id.toString() !== exam.campus.toString()){
                 return res.status(403).json({ message: "You can only update exams for your own campus" })
             }
         }
@@ -93,7 +110,7 @@ export const updateExam = async (req,res) => {
         }
         const updatedExam = await Exam.findByIdAndUpdate(
             examId,
-            {name, term, academicSession, class: classId, subject: subjectId, campus: campusId, totalMarks, type},
+            { term, academicSession, class: classId, subject: subjectId, totalMarks, type},
             { new: true, runValidators: true }
         )
         res.json({ message: "Exam updated successfully", exam: updatedExam })
@@ -115,7 +132,7 @@ export const deleteExam = async (req,res) => {
             return res.status(404).json({ message: "Exam not found" })
         }
         if (role === "campus-admin") {
-            campusData = await Campus.findById({campusAdmin: userId})
+            campusData = await Campus.findOne({campusAdmin: userId})
             if(campusData._id.toString() !== examData.campus.toString()){
                 return res.status(403).json({ message: "You can only delete exams for your own campus" })
             }
