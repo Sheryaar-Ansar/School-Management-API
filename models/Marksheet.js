@@ -28,6 +28,7 @@ const marksheetSchema = new Schema(
     grandTotal: { type: Number, required: true },
     grandObtained: { type: Number, required: true },
     overallPercentage: { type: Number, required: true },
+    overallGrade: { type: String, required: true },
     rank: { type: Number }, // position
     finalRemarks: {
       type: String,

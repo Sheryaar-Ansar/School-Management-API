@@ -8,6 +8,7 @@ import TeacherAssignment from "../models/TeacherAssignment.js";
 import StudentEnrollment from "../models/StudentEnrollment.js";
 import Exam from "../models/Exam.js";
 import Score from "../models/Score.js";
+import { generateMarksheet } from "../models/Score.js";
 
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/school-management-system";
 
@@ -105,7 +106,7 @@ const seed = async () => {
     }
 
     // 4) Teachers for each campus
-    const teachers = { };
+    const teachers = {};
     for (const campus of campuses) {
       teachers[campus.code] = [];
       for (let i = 1; i <= 6; i++) {
@@ -129,8 +130,8 @@ const seed = async () => {
     const classes = [];
     for (const campus of campuses) {
       const campusTeachers = teachers[campus.code];
-      const grades = [6,7,8];
-      const sections = ['A','B'];
+      const grades = [6, 7, 8];
+      const sections = ['A', 'B'];
       for (const grade of grades) {
         for (const section of sections) {
           // pick a random teacher from campus to be class teacher
@@ -195,7 +196,7 @@ const seed = async () => {
           password: "student123",
           contact: `03030000${i}`,
           address: "Student Address",
-          dob: new Date(2008, randomInt(0,11), randomInt(1,28)),
+          dob: new Date(2008, randomInt(0, 11), randomInt(1, 28)),
           role: "student",
           campus: cls.campus,
           createdBy: cls.createdBy,
@@ -203,7 +204,7 @@ const seed = async () => {
         students.push({ user: stu, class: cls });
 
         // Enrollment
-        const rollNumber = `${cls.grade}${cls.section}${String(i).padStart(2,'0')}`;
+        const rollNumber = `${cls.grade}${cls.section}${String(i).padStart(2, '0')}`;
         await StudentEnrollment.create({ student: stu._id, campus: cls.campus, class: cls._id, rollNumber, academicSession: '2025-2026' });
       }
     }
@@ -245,12 +246,19 @@ const seed = async () => {
       }
     }
 
+    console.log("⏳ Regenerating marksheets...");
+    const scores = await Score.find();
+    for (const score of scores) {
+      await generateMarksheet(score);
+    }
+    console.log("✅ All marksheets generated successfully");
+
     console.log(`\nSeeding summary:`);
     console.log(`  Super Admin: 1`);
     console.log(`  Campus Admins: ${campusAdmins.length}`);
     console.log(`  Campuses: ${campuses.length}`);
     console.log(`  Subjects: ${subjects.length}`);
-    console.log(`  Teachers: ${Object.values(teachers).reduce((a,b)=>a+b.length,0)}`);
+    console.log(`  Teachers: ${Object.values(teachers).reduce((a, b) => a + b.length, 0)}`);
     console.log(`  Classes: ${classes.length}`);
     console.log(`  Assignments: ${allAssignments.length}`);
     console.log(`  TeacherAssignments: ${teacherAssignments.length}`);
