@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import { Parser } from "json2csv";
 
 const generateToken = (userId, role) => {
   return jwt.sign({ userId, role }, process.env.JWT_SECRET, {
@@ -179,8 +180,6 @@ export const getMe = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
-import { Parser } from "json2csv";
 
 export const getAllUsers = async (req, res) => {
   try {
