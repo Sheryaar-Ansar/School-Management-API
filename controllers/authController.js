@@ -180,6 +180,8 @@ export const getMe = async (req, res) => {
   }
 };
 
+import { Parser } from "json2csv";
+
 export const getAllUsers = async (req, res) => {
   try {
     const { role: userRole } = req.user;
@@ -192,6 +194,7 @@ export const getAllUsers = async (req, res) => {
       search,
       pageNumber = 1,
       limit = 10,
+      downloadCSV = "false",
     } = req.query;
 
     const skip = (parseInt(pageNumber) - 1) * parseInt(limit);
@@ -217,12 +220,32 @@ export const getAllUsers = async (req, res) => {
       ];
     }
 
-    const users = await User.find(filter)
-      .select("name email role gender isActive") // only essential fields
-      // .populate("createdBy", "name email")
-      .skip(skip)
-      .limit(parseInt(limit))
+    const usersQuery = User.find(filter)
+      .select("name email role gender isActive createdAt")
       .sort({ createdAt: -1 });
+
+    if (downloadCSV !== "true") {
+      usersQuery.skip(skip).limit(parseInt(limit));
+    }
+
+    const users = await usersQuery;
+
+    if (downloadCSV === "true") {
+      const fields = [
+        "name",
+        "email",
+        "role",
+        "gender",
+        "isActive",
+        "createdAt",
+      ];
+      const parser = new Parser({ fields });
+      const csv = parser.parse(users);
+
+      res.header("Content-Type", "text/csv");
+      res.attachment("users.csv");
+      return res.send(csv);
+    }
 
     const total = await User.countDocuments(filter);
 
@@ -245,7 +268,8 @@ export const getUserById = async (req, res) => {
     const { id } = req.params;
     const userRole = req.user.role;
 
-    const user = await User.findById(id).select("name email role gender isActive createdBy")
+    const user = await User.findById(id)
+      .select("name email role gender isActive createdBy")
       .populate("createdBy", "name email role");
 
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -253,8 +277,10 @@ export const getUserById = async (req, res) => {
     if (userRole === "super-admin") {
       return res.json(user);
     } else if (userRole === "campus-admin") {
-      if (user.createdBy?._id.toString() === req.user._id.toString() &&
-          ["teacher", "student"].includes(user.role)) {
+      if (
+        user.createdBy?._id.toString() === req.user._id.toString() &&
+        ["teacher", "student"].includes(user.role)
+      ) {
         return res.json(user);
       } else {
         return res.status(403).json({ message: "Access denied" });
@@ -267,7 +293,6 @@ export const getUserById = async (req, res) => {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
-
 
 export const updateUser = async (req, res) => {
   try {
