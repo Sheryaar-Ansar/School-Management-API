@@ -7,13 +7,13 @@ export const markTeacherAttendance = async (req, res) => {
     const { teacher, status, campus } = req.body;
 
     const now = new Date();
-    const hours = now.getHours();
+    // const hours = now.getHours();
 
-    if (hours < 7 || hours >= 12) {
-      return res
-        .status(400)
-        .json({ error: "Attendance can only be marked between 7:00 AM and 12:00 PM" });
-    }
+    // if (hours < 7 || hours >= 12) {
+    //   return res
+    //     .status(400)
+    //     .json({ error: "Attendance can only be marked between 7:00 AM and 12:00 PM" });
+    // }
 
     const dayOfWeek = now.getDay();
     if (dayOfWeek === 0) {
@@ -82,13 +82,13 @@ export const teacherCheckOut = async (req, res) => {
     }
 
     const now = new Date();
-    const hours = now.getHours();
+    // const hours = now.getHours();
 
-    if (hours < 9 || hours > 21) {
-      return res
-        .status(400)
-        .json({ error: "Check-out can only be done between 9:00 AM and 9:00 PM" });
-    }
+    // if (hours < 9 || hours > 21) {
+    //   return res
+    //     .status(400)
+    //     .json({ error: "Check-out can only be done between 9:00 AM and 9:00 PM" });
+    // }
 
     const startOfDay = new Date(now.setHours(0, 0, 0, 0));
 
