@@ -126,16 +126,26 @@ const seed = async () => {
       }
     }
 
-    // 5) Create classes (grades 6-8, sections A,B) per campus and assign class teachers
+    // 5) Create classes (grades 6-8, sections A,B) per campus and assign unique class teachers
     const classes = [];
     for (const campus of campuses) {
-      const campusTeachers = teachers[campus.code];
+      // make a shallow copy of teachers array and shuffle it so we can assign unique teachers per class
+      const campusTeachers = [...teachers[campus.code]];
+      // simple Fisher-Yates shuffle
+      for (let i = campusTeachers.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [campusTeachers[i], campusTeachers[j]] = [campusTeachers[j], campusTeachers[i]];
+      }
+
       const grades = [6, 7, 8];
       const sections = ['A', 'B'];
+      let teacherIndex = 0;
       for (const grade of grades) {
         for (const section of sections) {
-          // pick a random teacher from campus to be class teacher
-          const classTeacher = campusTeachers[randomInt(0, campusTeachers.length - 1)];
+          // pick the next teacher from shuffled list; if exhausted, wrap around (or create more teachers if desired)
+          if (teacherIndex >= campusTeachers.length) teacherIndex = 0;
+          const classTeacher = campusTeachers[teacherIndex];
+          teacherIndex++;
           const classDoc = await ClassModel.create({
             grade,
             section,
