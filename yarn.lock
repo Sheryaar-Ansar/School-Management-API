@@ -1443,6 +1443,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"nodemailer@npm:^7.0.9":
+  version: 7.0.9
+  resolution: "nodemailer@npm:7.0.9"
+  checksum: 10c0/029af0c89d64a521aa9969196e44c13ef289c7f419264eed8d63682610999e06205b0fc264ab8ac65941dc3eefd3c435f23337a32880614cc199744c9be6209a
+  languageName: node
+  linkType: hard
+
 "nodemon@npm:^3.1.10":
   version: 3.1.10
   resolution: "nodemon@npm:3.1.10"
@@ -1713,6 +1720,7 @@ __metadata:
     jsonwebtoken: "npm:^9.0.2"
     mongoose: "npm:^8.18.3"
     node-cron: "npm:^4.2.1"
+    nodemailer: "npm:^7.0.9"
     nodemon: "npm:^3.1.10"
     openai: "npm:^6.3.0"
   languageName: unknown
