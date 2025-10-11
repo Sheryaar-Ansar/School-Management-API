@@ -1,74 +1,101 @@
+import mongoose from "mongoose";
+import Campus from "../models/Campus.js";
 import StudentAttendance from "../models/StudentAttendance.js";
 import StudentEnrollment from "../models/StudentEnrollment.js";
+import TeacherAssignment from "../models/TeacherAssignment.js";
+import Class from "../models/Class.js";
 
 export const markBulkStudentAttendance = async (req, res) => {
   try {
-    const { classId, records } = req.body; //  records = [{ rollNo: "101", status: "present" }, ...]
+    const { classId, records } = req.body; // [{ rollNumber, status }, ...]
 
-    if (!classId || !records || !records.length) {
+    if (!classId || !records?.length) {
       return res
         .status(400)
         .json({ message: "Class ID and records are required" });
     }
 
-    if (req.user.role !== "teacher" && req.user.role !== "campus-admin") {
+    let classRec;
+
+    if (req.user.role === "teacher") {
+      const teacherAssignment = await TeacherAssignment.findOne({
+        teacher: req.user._id,
+      });
+
+      if (!teacherAssignment)
+        return res
+          .status(403)
+          .json({ message: "You are not assigned to any class" });
+
+      classRec = await Class.findById(teacherAssignment.class);
+      if (!classRec)
+        return res
+          .status(404)
+          .json({ message: "Assigned class not found" });
+    } else {
+      classRec = await Class.findById(classId);
+      if (!classRec)
+        return res.status(404).json({ message: "Class not found" });
+    }
+
+    // Only class teacher or admin can mark
+    if (
+      req.user.role === "teacher" &&
+      String(classRec.classTeacher) !== String(req.user._id)
+    ) {
       return res
         .status(403)
-        .json({ message: "You are not authorized to mark student attendance" });
+        .json({ message: "Only Class Teacher or Admin can mark attendance" });
+    }
+
+    const now = new Date();
+    if (now.getDay() === 0) {
+      return res
+        .status(400)
+        .json({ message: "Attendance cannot be marked on Sundays" });
     }
 
     const today = new Date();
-    const dayOfWeek = today.getDay();
-    if (dayOfWeek === 0) {
-      return res
-        .status(400)
-        .json({ error: "Attendance cannot be marked on Sundays" });
-    }
-
     today.setHours(0, 0, 0, 0);
-
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
 
     const attendanceResults = [];
 
     for (let rec of records) {
-      const { rollNo, status } = rec;
+      const { rollNumber, status } = rec;
 
       const student = await StudentEnrollment.findOne({
-        rollNo,
-        class: classId,
+        rollNumber,
+        class: classRec._id,
       });
 
       if (!student) {
-        attendanceResults.push({
-          rollNo,
-          message: "Student not found",
-        });
+        attendanceResults.push({ rollNumber, message: "Student not found" });
         continue;
       }
 
       const alreadyMarked = await StudentAttendance.findOne({
-        student: student._id,
-        class: classId,
+        enrollment: student._id,
+        class: classRec._id,
         date: { $gte: today, $lt: tomorrow },
       });
 
       if (alreadyMarked) {
-        attendanceResults.push({ rollNo, status, message: "Already marked" });
+        attendanceResults.push({ rollNumber, status, message: "Already marked" });
         continue;
       }
 
       const attendance = await StudentAttendance.create({
         enrollment: student._id,
         status,
-        class: classId,
-        campus: req.user.campus,
-        markedBy: req.user.role,
+        class: classRec._id,
+        campus: classRec.campus,
+        markedBy: req.user._id,
       });
 
       attendanceResults.push({
-        rollNo,
+        rollNumber,
         status,
         message: "Marked",
         id: attendance._id,
@@ -87,32 +114,112 @@ export const markBulkStudentAttendance = async (req, res) => {
   }
 };
 
+
 export const getAllStudentsAttendance = async (req, res) => {
   try {
-    const records = await StudentAttendance.aggregate([
-      { $match: { campus: req.user.campus } },
+    const { status, from, to, classId, pageNumber, pageSize } = req.query;
+    const page = parseInt(pageNumber) || 1;
+    const limit = parseInt(pageSize) || 10;
+
+    const match = {};
+
+    const campus = await Campus.findOne({ campusAdmin: req.user._id });
+    if (campus) match.campus = new mongoose.Types.ObjectId(campus._id);
+
+    if (status) match.status = status;
+    if (classId) match.class = new mongoose.Types.ObjectId(classId);
+
+    if (from && to) {
+      const fromDate = new Date(from);
+      fromDate.setHours(0, 0, 0, 0);
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+      match.date = { $gte: fromDate, $lte: toDate };
+    }
+
+    const result = await StudentAttendance.aggregate([
+      { $match: match },
       {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
-          students: { $push: { status: "$status", enrollment: "$enrollment" } },
+        $lookup: {
+          from: "classes",
+          localField: "class",
+          foreignField: "_id",
+          as: "classDetails",
         },
       },
-      { $sort: { _id: -1 } },
+      { $unwind: "$classDetails" },
+      {
+        $lookup: {
+          from: "studentenrollments",
+          localField: "enrollment",
+          foreignField: "_id",
+          as: "enrollmentDetails",
+        },
+      },
+      { $unwind: "$enrollmentDetails" },
+      {
+        $lookup: {
+          from: "users",
+          localField: "enrollmentDetails.student",
+          foreignField: "_id",
+          as: "studentDetails",
+        },
+      },
+      { $unwind: "$studentDetails" },
+      {
+        $facet: {
+          records: [
+            {
+              $project: {
+                _id: 1,
+                date: 1,
+                status: 1,
+                class: 1,
+                campus: 1,
+                "classDetails.grade": 1,
+                "classDetails.section": 1,
+                "studentDetails._id": 1,
+                "studentDetails.name": 1,
+                "studentDetails.email": 1,
+                "studentDetails.contact": 1,
+                "enrollmentDetails.rollNumber": 1,
+              },
+            },
+            { $sort: { date: -1 } },
+            { $skip: (page - 1) * limit },
+            { $limit: limit },
+          ],
+          counts: [
+            {
+              $group: {
+                _id: "$status",
+                count: { $sum: 1 },
+              },
+            },
+          ],
+        },
+      },
     ]);
 
-    // const records = await StudentAttendance.find({
-    //   campus: req.user.campus,
-    // })
-    //   .populate({
-    //     path: "enrollment",
-    //     populate: [
-    //       { path: "student", select: "name email" },
-    //       { path: "class", select: "name" },
-    //     ],
-    //   })
-    //   .sort({ date: -1 });
+    const records = result[0].records;
+    const countArray = result[0].counts;
 
-    res.json(records);
+    if (!records.length)
+      return res.status(404).json({ message: "No student attendance found" });
+
+    const countSummary = countArray.reduce(
+      (acc, cur) => {
+        acc[cur._id] = cur.count;
+        return acc;
+      },
+      { present: 0, absent: 0, leave: 0 }
+    );
+
+    res.json({
+      records,
+      countSummary,
+      total: records.length,
+    });
   } catch (err) {
     res.status(500).json({
       message: "Error fetching student attendance",
@@ -123,33 +230,94 @@ export const getAllStudentsAttendance = async (req, res) => {
 
 export const getStudentAttendance = async (req, res) => {
   try {
-    const { studentId } = req.params; 
-    const { date } = req.query;       
+    const { from, to, status, pageNumber, pageSize } = req.query;
+    const page = parseInt(pageNumber) || 1;
+    const limit = parseInt(pageSize) || 10;
+    const studentId = req.params.studentId;
 
-    const filter = { student: studentId };
+    const match = {
+      "enrollmentDetails.student": new mongoose.Types.ObjectId(studentId),
+    };
 
-    if (date) {
-      const dayStart = new Date(date);
-      dayStart.setHours(0, 0, 0, 0);
-
-      const dayEnd = new Date(date);
-      dayEnd.setHours(23, 59, 59, 999);
-
-      filter.date = { $gte: dayStart, $lte: dayEnd };
+    if (status) match.status = status;
+    if (from && to) {
+      const fromDate = new Date(from);
+      fromDate.setHours(0, 0, 0, 0);
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+      match.date = { $gte: fromDate, $lte: toDate };
     }
 
-    const records = await StudentAttendance.find(filter)
-      .populate({ path: "student", select: "name email" })
-      .populate({ path: "class", select: "name" })
-      .sort({ date: -1 });
+    const result = await StudentAttendance.aggregate([
+      {
+        $lookup: {
+          from: "studentenrollments",
+          localField: "enrollment",
+          foreignField: "_id",
+          as: "enrollmentDetails",
+        },
+      },
+      { $unwind: "$enrollmentDetails" },
+      {
+        $lookup: {
+          from: "users",
+          localField: "enrollmentDetails.student",
+          foreignField: "_id",
+          as: "studentDetails",
+        },
+      },
+      { $unwind: "$studentDetails" },
+      { $match: match },
+      {
+        $facet: {
+          records: [
+            {
+              $project: {
+                _id: 1,
+                date: 1,
+                status: 1,
+                class: 1,
+                campus: 1,
+                "studentDetails.name": 1,
+                "studentDetails.email": 1,
+                "enrollmentDetails.rollNumber": 1,
+              },
+            },
+            { $sort: { date: -1 } },
+            { $skip: (page - 1) * limit },
+            { $limit: limit },
+          ],
+          counts: [
+            {
+              $group: {
+                _id: "$status",
+                count: { $sum: 1 },
+              },
+            },
+          ],
+        },
+      },
+    ]);
 
-    if (!records.length) {
-      return res.status(404).json({
-        message: "No attendance records found",
-      });
-    }
+    const records = result[0].records;
+    const countArray = result[0].counts;
 
-    res.json(records);
+    if (!records.length)
+      return res.status(404).json({ message: "No attendance found" });
+
+    const countSummary = countArray.reduce(
+      (acc, cur) => {
+        acc[cur._id] = cur.count;
+        return acc;
+      },
+      { present: 0, absent: 0, leave: 0 }
+    );
+
+    res.json({
+      total: records.length,
+      records,
+      countSummary,
+    });
   } catch (err) {
     res.status(500).json({
       message: "Error fetching student attendance",
@@ -160,7 +328,6 @@ export const getStudentAttendance = async (req, res) => {
 
 export const updateStudentAttendance = async (req, res) => {
   try {
-    
     const updated = await StudentAttendance.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -170,7 +337,7 @@ export const updateStudentAttendance = async (req, res) => {
     if (!updated)
       return res.status(404).json({ message: "Attendance record not found" });
 
-    res.json({ message: "Student attendance updated!", record: updated });
+    res.json({ message: "Student attendance updated!" });
   } catch (err) {
     res
       .status(400)

@@ -5,10 +5,10 @@ import { deleteStudentAttendance, getAllStudentsAttendance, getStudentAttendance
 
 const router = express.Router();
 
-router.post("/markAttendance", authenticate, authRole("teacher", "campus-admin"), markBulkStudentAttendance);
-router.get("/", authenticate, authRole("campus-admin"), getAllStudentsAttendance);
-router.get("/:studentId", authenticate, authRole("campus-admin"), getStudentAttendance);
-router.put("/:id", authenticate, authRole("campus-admin"), updateStudentAttendance);
-router.delete("/:id", authenticate, authRole("campus-admin"), deleteStudentAttendance);
+router.post("/markAttendance", authenticate, authRole(["teacher", "campus-admin", "super-admin"]), markBulkStudentAttendance);
+router.get("/", authenticate, authRole(["campus-admin","super-admin"]), getAllStudentsAttendance);
+router.get("/:studentId", authenticate, authRole(["campus-admin","super-admin"]), getStudentAttendance);
+router.put("/student/:id", authenticate, authRole(["campus-admin","super-admin"]), updateStudentAttendance);
+router.delete("/student/:id", authenticate, authRole(["campus-admin","super-admin"]), deleteStudentAttendance);
 
 export default router;
