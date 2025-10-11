@@ -4,6 +4,6 @@ import { getStudyRecommendations } from "../controllers/recommendationController
 
 const router = express.Router();
 
-router.get("/:studentId/study-recommendation", authenticate, authRole(["teacher", "campus-admin", "super-admin"]), getStudyRecommendations);
+router.get("/:studentId", authenticate, authRole(["student", "campus-admin", "super-admin"]), getStudyRecommendations);
 
 export default router;
