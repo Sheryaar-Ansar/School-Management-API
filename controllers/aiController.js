@@ -26,15 +26,12 @@ export const getStudyRecommendations = async (req, res) => {
     if (!student || student.role !== "student")
       return res.status(404).json({ message: "Student not found" });
 
-    // 🧾 Fetch all scores
     const scores = await Score.find({ student: studentId }).populate("subject exam");
     if (!scores.length)
       return res.status(404).json({ message: "No scores found for this student" });
 
-    // 🪄 Build AI prompt (now includes student name)
     const prompt = buildPrompt(student.name, scores);
 
-    // 🔗 Send request to OpenRouter
     const response = await openrouter.post(
       "/chat/completions",
       {
@@ -69,3 +66,34 @@ export const getStudyRecommendations = async (req, res) => {
     });
   }
 };
+
+// export const generateStudyPlanner = async (req, res) => {
+//   try {
+//     const { studentName, subjects, availableHours } = req.body;
+//     // subjects = [{ name: "Math", level: "weak" }, { name: "Science", level: "good" }]
+
+//     const prompt = `
+// Create a weekly study plan for student "${studentName}".
+// Subjects and performance levels:
+// ${subjects.map(s => `${s.name}: ${s.level}`).join("\n")}
+
+// The student has around ${availableHours} hours per week.
+// Make the plan practical and motivational.
+// `;
+
+//     const response = await aiClient.post("/chat/completions", {
+//       model: "gpt-4o-mini",
+//       messages: [{ role: "user", content: prompt }],
+//     });
+
+//     const plan = response.data.choices[0].message.content;
+//     res.json({ student: studentName, plan });
+//   } catch (error) {
+//     console.error("Planner error:", error.response?.data || error.message);
+//     res.status(500).json({
+//       message: "Error generating study planner",
+//       error: error.response?.data || error.message,
+//     });
+//   }
+// };
+
