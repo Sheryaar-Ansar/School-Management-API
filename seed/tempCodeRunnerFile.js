@@ -138,28 +138,25 @@ const seed = async () => {
     }
 
     // 4) Teachers per campus
- const teachers = {};
-for (const campus of campuses) {
-  teachers[campus.code] = [];
-  // find the original campus spec to get the admin
-  const cspec = campusSpecs.find((c) => c.code === campus.code);
-
-  for (let i = 1; i <= 6; i++) {
-    const t = await User.create({
-      name: `${campus.name.split(" ")[0]} Teacher ${i}`,
-      gender: i % 2 === 0 ? "Male" : "Female",
-      email: `${campus.code.toLowerCase()}_teacher${i}@school.com`,
-      password: "teacher123",
-      contact: `03020000${100 + i}`,
-      address: campus.city,
-      dob: new Date(`199${i}-01-01`),
-      role: "teacher",
-      campus: campus._id,
-      createdBy: cspec.admin._id, // ✅ fixed
-    });
-    teachers[campus.code].push(t);
-  }
-}
+    const teachers = {};
+    for (const campus of campuses) {
+      teachers[campus.code] = [];
+      for (let i = 1; i <= 6; i++) {
+        const t = await User.create({
+          name: `${campus.name.split(" ")[0]} Teacher ${i}`,
+          gender: i % 2 === 0 ? "Male" : "Female",
+          email: `${campus.code.toLowerCase()}_teacher${i}@school.com`,
+          password: "teacher123",
+          contact: `03020000${100 + i}`,
+          address: campus.city,
+          dob: new Date(`199${i}-01-01`),
+          role: "teacher",
+          campus: campus._id,
+          createdBy: campus.campusAdmin,
+        });
+        teachers[campus.code].push(t);
+      }
+    }
 
     // 5) Classes (6-8 A,B)
     const classes = [];
@@ -283,76 +280,59 @@ for (const campus of campuses) {
     }
 
     // 10) Scores
-    // let scoreCount = 0;
-    // for (const exam of exams) {
-    //   const enrolled = students.filter((s) => s.class._id.equals(exam.class));
-    //   for (const s of enrolled) {
-    //     const obtained = randomInt(
-    //       Math.max(30, Math.floor(exam.totalMarks * 0.35)),
-    //       exam.totalMarks
-    //     );
-    //     await Score.create({
-    //       student: s.user._id,
-    //       class: exam.class,
-    //       subject: exam.subject,
-    //       campus: exam.campus,
-    //       exam: exam._id,
-    //       marksObtained: obtained,
-    //       enteredBy: superAdmin._id,
-    //     });
-    //     scoreCount++;
-    //   }
-    // }
+    let scoreCount = 0;
+    for (const exam of exams) {
+      const enrolled = students.filter((s) => s.class._id.equals(exam.class));
+      for (const s of enrolled) {
+        const obtained = randomInt(
+          Math.max(30, Math.floor(exam.totalMarks * 0.35)),
+          exam.totalMarks
+        );
+        await Score.create({
+          student: s.user._id,
+          class: exam.class,
+          subject: exam.subject,
+          campus: exam.campus,
+          exam: exam._id,
+          marksObtained: obtained,
+          enteredBy: superAdmin._id,
+        });
+        scoreCount++;
+      }
+    }
 
-// 11) Teacher Attendance (limit 50)
-const teacherAttendances = [];
-const allTeachers = Object.values(teachers).flat();
-for (const teacher of allTeachers.slice(0, 50)) {
-  const campus = campuses.find(
-    (c) => c._id.toString() === teacher.campus.toString()
-  );
+    // 11) Teacher Attendance (limit 50)
+    const teacherAttendances = [];
+    const allTeachers = Object.values(teachers).flat();
+    for (const teacher of allTeachers.slice(0, 50)) {
+      const campus = campuses.find((c) => c._id.equals(teacher.campus));
+      const date = new Date();
+      await TeacherAttendance.create({
+        teacher: teacher._id,
+        status: ["present", "absent", "leave"][randomInt(0, 2)],
+        campus: campus._id,
+        checkIn: new Date(date.setHours(8, randomInt(0, 59))),
+        checkOut: new Date(date.setHours(14, randomInt(0, 59))),
+        date,
+        markedBy: campus.campusAdmin._id,
+      });
+      teacherAttendances.push(teacher._id);
+    }
 
-  if (!campus) {
-    console.warn(`Campus not found for teacher ${teacher.name}, skipping attendance.`);
-    continue;
-  }
-
-  if (!campus.campusAdmin) {
-    console.warn(`Campus admin missing for campus ${campus.name}, skipping teacher ${teacher.name}`);
-    continue;
-  }
-
-  await TeacherAttendance.create({
-    teacher: teacher._id,
-    status: ["present", "absent", "leave"][randomInt(0, 2)],
-    campus: campus._id,
-    checkIn: new Date(date.getFullYear(), date.getMonth(), date.getDate(), 8, randomInt(0, 59)),
-    checkOut: new Date(date.getFullYear(), date.getMonth(), date.getDate(), 14, randomInt(0, 59)),
-    date,
-    markedBy: campus.campusAdmin._id,
-  });
-
-  teacherAttendances.push(teacher._id);
-}
-
-// 12) Student Attendance (limit 50)
-const studentAttendances = [];
-for (const enrollment of enrollments.slice(0, 50)) {
-  for (let d = 0; d < 60; d++) { // 60 days back
-    const date = new Date();
-    date.setDate(date.getDate() - d); // generate past dates
-    await StudentAttendance.create({
-      enrollment: enrollment._id,
-      status: ["present", "absent", "leave"][randomInt(0, 2)],
-      class: enrollment.class,
-      campus: enrollment.campus,
-      date,
-      markedBy: superAdmin._id,
-    });
-
-  studentAttendances.push(enrollment._id);
-  }
-}
+    // 12) Student Attendance (limit 50)
+    const studentAttendances = [];
+    for (const enrollment of enrollments.slice(0, 50)) {
+      const date = new Date();
+      await StudentAttendance.create({
+        enrollment: enrollment._id,
+        status: ["present", "absent", "leave"][randomInt(0, 2)],
+        class: enrollment.class,
+        campus: enrollment.campus,
+        date,
+        markedBy: superAdmin._id,
+      });
+      studentAttendances.push(enrollment._id);
+    }
 
     // 12) Student Attendance
     // for (const enrollment of enrollments.slice(0, 30)) {
@@ -371,17 +351,17 @@ for (const enrollment of enrollments.slice(0, 50)) {
     // }
 
     // Generate marksheets
-    // console.log("⏳ Regenerating marksheets...");
-    // const scores = await Score.find();
-    // for (const score of scores) {
-    //   await generateMarksheet(score);
-    // }
+    console.log("⏳ Regenerating marksheets...");
+    const scores = await Score.find();
+    for (const score of scores) {
+      await generateMarksheet(score);
+    }
 
     console.log("✅ All marksheets generated successfully");
     console.log("\nSeeding summary:");
     console.log(`  Teachers Attendance: ✅`);
     console.log(`  Students Attendance: ✅`);
-    // console.log(`  Scores: ${scoreCount}`);
+    console.log(`  Scores: ${scoreCount}`);
     console.log("✅ Seeding completed successfully");
     process.exit(0);
   } catch (err) {
