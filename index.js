@@ -19,6 +19,16 @@ const app = express();
 connectDB();
 app.use(express.json());
 
+// ✅ Health check route
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    message: "Server is healthy 🚀",
+    uptime: process.uptime(),
+    timestamp: new Date(),
+  });
+});
+
 // API Routes
 app.use("/api/auth", authRoutes)
 app.use('/api/campuses', campusRoutes)
