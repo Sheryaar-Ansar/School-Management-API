@@ -1,5 +1,6 @@
 import express from "express";
 import "dotenv/config";
+import "./cronJobs/cronJobs.js";
 import connectDB from "./db/index.js";
 import authRoutes from "./routes/authRoutes.js"
 import classRoutes from './routes/classRoutes.js'
