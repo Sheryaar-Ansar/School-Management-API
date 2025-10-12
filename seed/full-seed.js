@@ -171,10 +171,15 @@ const seed = async () => {
 
       const grades = [6, 7, 8];
       const sections = ['A', 'B'];
+      let teacherIndex = 0;
       for (const grade of grades) {
         for (const section of sections) {
-          // pick a random teacher from campus to be class teacher
-          const classTeacher = campusTeachers[randomInt(0, campusTeachers.length - 1)];
+          // assign each teacher only once as class teacher
+          if (teacherIndex >= campusTeachers.length) {
+            throw new Error(`Not enough teachers to assign unique class teachers for campus ${campus.name}`);
+          }
+          const classTeacher = campusTeachers[teacherIndex];
+          teacherIndex++;
           const classDoc = await ClassModel.create({
             grade,
             section,
@@ -312,7 +317,17 @@ const seed = async () => {
     const teacherAttendances = [];
     const allTeachers = Object.values(teachers).flat();
     for (const teacher of allTeachers.slice(0, 50)) {
-      const campus = campuses.find((c) => c._id.equals(teacher.campus));
+      if (!teacher.campus) {
+        console.warn(`Teacher ${teacher.name} has no campus assigned.`);
+        continue;
+      }
+      const campus = campuses.find(
+        (c) => c._id.toString() === teacher.campus.toString()
+      );
+      if (!campus) {
+        console.warn(`No campus found for teacher ${teacher.name}`);
+        continue;
+      }
       const date = new Date();
       await TeacherAttendance.create({
         teacher: teacher._id,
