@@ -2,7 +2,6 @@ import express from "express";
 import "dotenv/config";
 import connectDB from "./db/index.js";
 import authRoutes from "./routes/authRoutes.js"
-
 import classRoutes from './routes/classRoutes.js'
 import campusRoutes from './routes/campusRoutes.js'
 import subjectRoutes from './routes/subjectRoutes.js'
@@ -12,6 +11,7 @@ import enrollmentRoutes from './routes/enrollmentRoutes.js'
 import examRoutes from './routes/examRoutes.js'
 import scoreRoutes from './routes/scoreRoutes.js'
 import marksheetRoutes from './routes/marksheetRoute.js'
+import aiRoutes from './routes/aiRoutes.js'
 
 const app = express();
 
@@ -29,6 +29,7 @@ app.use('/api/enrollments', enrollmentRoutes)
 app.use('/api/exams', examRoutes)
 app.use('/api/score', scoreRoutes)
 app.use('/api/result', marksheetRoutes)
+app.use('/api/ai', aiRoutes)
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {

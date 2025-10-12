@@ -1,4 +1,4 @@
-import { assignTeacher, updateTeacher, deleteTeacher, getTeachers, enrollStudent, updateStudentEnrollment, deleteStudentEnrollment, getStudentEnrollments } from '../controllers/enrollmentController.js'
+import { assignTeacher, updateTeacher, deleteTeacher, getTeachers, enrollStudent, updateStudentEnrollment, deleteStudentEnrollment, getStudentEnrollments, getUnassignedTeachers } from '../controllers/enrollmentController.js'
 import express from 'express'
 import { authenticate, authRole } from '../middlewares/authMiddleware.js'
 const router = express.Router()
@@ -9,6 +9,7 @@ const router = express.Router()
 //----------------------------------------------------------------------
 router.post('/assign-teacher', authenticate, authRole(['super-admin', 'campus-admin']), assignTeacher)
 router.get('/teacher-assignments', authenticate, authRole(['super-admin', 'campus-admin']), getTeachers)
+router.get('/unassigned-teachers', authenticate, authRole(['super-admin', 'campus-admin']), getUnassignedTeachers)
 router.patch('/assign-teacher/:id', authenticate, authRole(['super-admin', 'campus-admin']), updateTeacher)
 router.post('/assign-teacher/:id/delete', authenticate, authRole(['super-admin', 'campus-admin']), deleteTeacher)
 //----------------------------------------------------------------------

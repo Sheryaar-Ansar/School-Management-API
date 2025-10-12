@@ -34,7 +34,9 @@ export const assignTeacher = async (req, res) => {
         if (!teacher || teacher.role !== "teacher") {
             return res.status(400).json({ error: "Invalid teacher ID" })
         }
-
+        if (role === "campus-admin" && teacher.createdBy !== _id) {
+            return res.status(400).json({ error: "You can only assign your teachers" })
+        }
         const assignment = await Assignment.findOneAndUpdate(
             { campus: campusId, class: classId, subject: subjectId },
             { campus: campusId, class: classId, subject: subjectId },
@@ -64,6 +66,50 @@ export const assignTeacher = async (req, res) => {
         res.status(400).json({ error: error.message })
     }
 }
+
+export const getUnassignedTeachers = async (req, res) => {
+  try {
+    const { role, _id } = req.user;
+    const { pageNumber = 1, limit = 5, sortBy = "createdAt", order = "asc" } = req.query;
+
+    if (!["super-admin", "campus-admin"].includes(role)) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const assignedTeachers = await TeacherAssignment.find({ isActive: true }).select("teacher");
+    const assignedTeacherIds = assignedTeachers.map(t => t.teacher.toString());
+
+    let filter = { role: "teacher", isActive: true };
+    if (role === "campus-admin") {
+      filter.createdBy = _id; 
+    }
+
+    if (assignedTeacherIds.length > 0) {
+      filter._id = { $nin: assignedTeacherIds };
+    }
+
+    const skip = (parseInt(pageNumber) - 1) * parseInt(limit);
+
+    const total = await User.countDocuments(filter);
+
+    const unassignedTeachers = await User.find(filter)
+      .select("name email createdBy")
+      .sort({ [sortBy]: order === "asc" ? 1 : -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    res.json({
+      total,
+      page: parseInt(pageNumber),
+      limit: parseInt(limit),
+      count: unassignedTeachers.length,
+      data: unassignedTeachers,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+};
 
 export const updateTeacher = async (req, res) => {
     try {
