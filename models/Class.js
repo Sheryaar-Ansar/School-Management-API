@@ -21,4 +21,8 @@ const classSchema = new Schema(
   { timestamps: true }
 );
 
+// Enforce that a teacher can be classTeacher for at most one class.
+// sparse:true allows documents without classTeacher (null) and ensures uniqueness only for set values.
+classSchema.index({ classTeacher: 1 }, { unique: true, sparse: true });
+
 export default model("Class", classSchema);
