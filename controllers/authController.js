@@ -1,22 +1,60 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
-import Campus from "../models/Campus.js";
 
 const generateToken = (userId, role) => {
   return jwt.sign({ userId, role }, process.env.JWT_SECRET, {
-    expiresIn: "7d", 
+    expiresIn: "7d",
   });
 };
 
-export const registerAdmin = async (req, res) => {
+export const register = async (req, res) => {
   try {
     const { name, gender, email, password, contact, address, dob } = req.body;
-    const superAdmin = req.user
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already registered!" });
     }
-    if(req.user.role !== "super-admin") return res.status(403).json({error: 'Forbidden: You dont have permission for this action'})
+
+    const user = new User({
+      name,
+      gender,
+      email,
+      password,
+      contact,
+      address,
+      dob,
+      role: "super-admin",
+    });
+
+    await user.save();
+
+    res.status(201).json({
+      message: "User registered successfully!",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+export const registerCampusAdmin = async (req, res) => {
+  try {
+    const { name, gender, email, password, contact, address, dob } = req.body;
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already registered!" });
+    }
+    if (req.user.role !== "super-admin")
+      return res
+        .status(403)
+        .json({ error: "You dont have permission for this action" });
 
     const user = new User({
       name,
@@ -27,7 +65,7 @@ export const registerAdmin = async (req, res) => {
       address,
       dob,
       role: "campus-admin",
-      createdBy: superAdmin
+      createdBy: req.user._id,
     });
 
     await user.save();
@@ -39,7 +77,7 @@ export const registerAdmin = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-      }
+      },
     });
   } catch (error) {
     console.error(error);
@@ -49,48 +87,25 @@ export const registerAdmin = async (req, res) => {
 
 export const addTeacherStudent = async (req, res) => {
   try {
-    const { name, gender, email, password, contact, address, role, dob } = req.body;
-    const campusAdmin = req.user
+    const { name, gender, email, password, contact, address, role, dob } =
+      req.body;
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already registered!" });
     }
-    if(req.user.role !== 'super-admin' && req.user.role !== 'campus-admin') return res.status(403).json({error: 'Forbidden: You dont have permission for this action'})
-    const user = new User({
-      name,
-      gender,
-      email,
-      password,
-      contact,
-      address,
-      dob,
-      role,
-      createdBy: campusAdmin
-    });
 
-    await user.save();
+    if (req.user.role !== "super-admin" && req.user.role !== "campus-admin")
+      return res
+        .status(403)
+        .json({ error: "You dont have permission for this action" });
 
-    res.status(201).json({
-      message: "User registered successfully!",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      }
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server Error", error: error.message });
-  }
-};
-export const register = async (req, res) => {
-  try {
-    const { name, gender, email, password, contact, address, role, dob } = req.body;
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "Email already registered!" });
+    if (
+      req.user.role === "campus-admin" &&
+      !["teacher", "student"].includes(role)
+    ) {
+      return res
+        .status(403)
+        .json({ error: "Campus-admin can only create teacher or student" });
     }
 
     const user = new User({
@@ -102,6 +117,7 @@ export const register = async (req, res) => {
       address,
       dob,
       role,
+      createdBy: req.user._id,
     });
 
     await user.save();
@@ -113,7 +129,7 @@ export const register = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-      }
+      },
     });
   } catch (error) {
     console.error(error);
@@ -164,65 +180,148 @@ export const getMe = async (req, res) => {
   }
 };
 
+import { Parser } from "json2csv";
+
 export const getAllUsers = async (req, res) => {
   try {
-    const { role, _id } = req.user;
-    let users = [];
+    const { role: userRole } = req.user;
+    let filter = {};
 
-    if (role === "super-admin") {
-      users = await User.find()
-        .select("-password")
-        .populate("createdBy", "name email role")
+    const {
+      role,
+      gender,
+      isActive,
+      search,
+      pageNumber = 1,
+      limit = 10,
+      downloadCSV = "false",
+    } = req.query;
+
+    const skip = (parseInt(pageNumber) - 1) * parseInt(limit);
+
+    if (userRole === "super-admin") {
+      if (role) filter.role = role;
+      if (gender) filter.gender = gender;
+      if (isActive) filter.isActive = isActive === "true";
+    } else if (userRole === "campus-admin") {
+      filter.createdBy = req.user._id;
+      filter.role = { $in: ["teacher", "student"] };
+      if (gender) filter.gender = gender;
+      if (role) filter.role = role;
+      if (isActive) filter.isActive = isActive === "true";
+    } else {
+      return res.status(403).json({ message: "Access denied" });
     }
 
-    else if (role === "campus-admin") {
-      const campus = await Campus.findOne({ campusAdmin: _id }).select("_id")
-
-      if (!campus) {
-        return res.status(404).json({ message: "No campus assigned to this admin" })
-      }
-
-      users = await User.find({
-        campus: campus._id, 
-        role: { $in: ["teacher", "student"] },
-      })
-        .select("-password")
-        .populate("createdBy", "name email role")
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
     }
 
-    else {
-      return res.status(403).json({ message: "Access denied" })
+    const usersQuery = User.find(filter)
+      .select("name email role gender isActive createdAt")
+      .sort({ createdAt: -1 });
+
+    if (downloadCSV !== "true") {
+      usersQuery.skip(skip).limit(parseInt(limit));
     }
 
-    res.json(users)
+    const users = await usersQuery;
+
+    if (downloadCSV === "true") {
+      const fields = [
+        "name",
+        "email",
+        "role",
+        "gender",
+        "isActive",
+        "createdAt",
+      ];
+      const parser = new Parser({ fields });
+      const csv = parser.parse(users);
+
+      res.header("Content-Type", "text/csv");
+      res.attachment("users.csv");
+      return res.send(csv);
+    }
+
+    const total = await User.countDocuments(filter);
+
+    res.json({
+      pageNumber: parseInt(pageNumber),
+      limit: parseInt(limit),
+      total,
+      users,
+    });
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: "Error fetching users", error: error.message })
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: "Error fetching users", error: error.message });
   }
-}
+};
+
+export const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userRole = req.user.role;
+
+    const user = await User.findById(id)
+      .select("name email role gender isActive createdBy")
+      .populate("createdBy", "name email role");
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (userRole === "super-admin") {
+      return res.json(user);
+    } else if (userRole === "campus-admin") {
+      if (
+        user.createdBy?._id.toString() === req.user._id.toString() &&
+        ["teacher", "student"].includes(user.role)
+      ) {
+        return res.json(user);
+      } else {
+        return res.status(403).json({ message: "Access denied" });
+      }
+    } else {
+      return res.status(403).json({ message: "Access denied" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
 
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
-
     const targetUser = await User.findById(id);
-    if (!targetUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
+
+    if (!targetUser) return res.status(404).json({ message: "User not found" });
 
     if (req.user.role === "super-admin") {
-      const user = await User.findByIdAndUpdate(id, updates, { new: true }).select("-password");
-      return res.json({ message: "User updated successfully (super-admin)", user });
+      const user = await User.findByIdAndUpdate(id, updates, {
+        new: true,
+      }).select("-password");
+      return res.json({
+        message: "User updated successfully (super-admin)",
+      });
     }
 
     if (req.user.role === "campus-admin") {
       if (
-        targetUser.campus?.toString() === req.user.campus?.toString() &&
+        targetUser.createdBy?.toString() === req.user._id.toString() &&
         ["teacher", "student"].includes(targetUser.role)
       ) {
-        const user = await User.findByIdAndUpdate(id, updates, { new: true }).select("-password");
-        return res.json({ message: "User updated successfully (campus-admin)", user });
+        const user = await User.findByIdAndUpdate(id, updates, {
+          new: true,
+        }).select("-password");
+        return res.json({
+          message: "User updated successfully (campus-admin)",
+        });
       } else {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -237,11 +336,9 @@ export const updateUser = async (req, res) => {
 export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
-
     const targetUser = await User.findById(id);
-    if (!targetUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
+
+    if (!targetUser) return res.status(404).json({ message: "User not found" });
 
     if (req.user.role === "super-admin") {
       await targetUser.deleteOne();
@@ -250,11 +347,13 @@ export const deleteUser = async (req, res) => {
 
     if (req.user.role === "campus-admin") {
       if (
-        targetUser.campus?.toString() === req.user.campus?.toString() &&
+        targetUser.createdBy?.toString() === req.user._id.toString() &&
         ["teacher", "student"].includes(targetUser.role)
       ) {
         await targetUser.deleteOne();
-        return res.json({ message: "User deleted successfully (campus-admin)" });
+        return res.json({
+          message: "User deleted successfully (campus-admin)",
+        });
       } else {
         return res.status(403).json({ message: "Access denied" });
       }
