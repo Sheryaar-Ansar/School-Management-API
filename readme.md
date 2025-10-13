@@ -1,77 +1,276 @@
-# 📚 School Management Portal
+# 🏫 School Management API
 
-A **centralized platform** for managing multiple campuses under one head office.  
-The portal streamlines access for **administrators, teachers, and students** to manage attendance, exams, announcements, and performance analytics.  
-It also includes **AI-powered recommendations** to enhance learning outcomes and enable **data-driven decision-making**.
+A complete backend API for managing a school ecosystem — including students, teachers, classes, campuses, attendance, marksheets, and user roles (Super Admin, Campus Admin, Teacher, Student).  
+This system is built with **Node.js**, **Express**, and **MongoDB (Mongoose)** and supports **role-based authentication**, **email-based password reset**, **PDF/ZIP exports**, and **CSV downloads**.
 
 ---
 
 ## 🚀 Features
 
-### 🔑 User Roles
-- **Super Admin**
-  - Manages the entire system (head office).
-  - Creates & manages campuses and admins.
-- **Campus Admin**
-  - Manages a single campus (attendance, results, announcements).
-- **Teacher**
-  - Marks attendance.
-  - Adds & updates exam results.
-- **Student**
-  - Views attendance, results.
-  - Receives alerts & announcements.
+| Feature | Description |
+|----------|-------------|
+| 🧑‍💼 **Role-based Access Control** | Supports multiple user roles — `super-admin`, `campus-admin`, `teacher`, `student` with different permissions. |
+| 🔐 **JWT Authentication** | JSON Web Tokens for secure login and session management. |
+| 💌 **Password Reset via Gmail** | Forgot/reset password feature using Gmail with Nodemailer and secure reset tokens. |
+| 🧾 **Marksheet Management** | Create, view, and export student marksheets; supports PDF generation and ZIP download for multiple students. |
+| 🏫 **Campus Management** | Manage campuses and assign campus admins. |
+| 🧑‍🏫 **Teacher & Student Management** | Add, update, and delete users under specific roles and campuses. |
+| 📊 **Reports & CSV Export** | Download user data as CSV and marksheets as PDFs or zipped collections. |
+| 📅 **Attendance Tracking** | Maintain attendance records for students (if implemented in repo). |
+| ⚙️ **Validation Layer** | Robust input validation using **Joi** for request payloads. |
+| 📚 **Logging Middleware** | Logs requests and responses for better observability and debugging. |
+| 🛡️ **Error Handling** | Centralized error-handling middleware with meaningful HTTP responses. |
 
 ---
 
-### 🏫 Multi-Campus Management
-- Separate data for each campus (students, teachers).
-- Centralized dashboard at head office for monitoring.
+## 📁 Project Structure
 
-### 📊 Attendance & Exam System
-- Teachers mark attendance daily.
-- Exam results added per subject/class (tests, assessments, midterm).
-- Generate mark sheets.
-
-### 📢 Real-Time Announcements (via **WebSockets**)
-- **Head Office → All campuses**.
-- **Campus Admin → Teachers & Students**.
-- Example: _“Tomorrow is a holiday across all campuses.”_
-
-### ⏰ Cron Jobs (Automated Tasks)
-- Attendance & performance reports emailed to parents/students.
-- Low Attendance Alerts: Auto email/notification if attendance `< 75%`.
-
-### 📈 Aggregation Pipelines
-- Top performers in each campus.
-- Compare campuses by average results.
-- Attendance trends & subject-wise performance analytics.
-
-### 🤖 AI Integration 
-- Personalized study recommendations for students.
-- OpenAI API / ML model for generating study tips.
+```
+School-Management-API/
+│
+├── config/            # Configuration files (database, environment)
+├── controllers/       # All controller logic for each module
+│   ├── authController.js
+│   ├── marksheetController.js
+│   ├── campusController.js
+│   ├── classController.js
+│   ├── attendanceController.js
+│   └── ...
+│
+├── middlewares/       # Authentication, logging, error handling, validation
+│   ├── authMiddleware.js
+│   ├── errorMiddleware.js
+│   ├── loggingMiddleware.js
+│   └── validationMiddleware.js
+│
+├── models/            # Mongoose schemas and models
+│   ├── User.js
+│   ├── Marksheet.js
+│   ├── Class.js
+│   ├── Campus.js
+│   ├── Subject.js
+│   └── Attendance.js
+│
+├── routes/            # Express route definitions
+│   ├── authRoutes.js
+│   ├── userRoutes.js
+│   ├── marksheetRoutes.js
+│   ├── campusRoutes.js
+│   ├── classRoutes.js
+│   └── ...
+│
+├── validators/        # Joi validation schemas
+│   ├── authValidator.js
+│   ├── marksheetValidator.js
+│   ├── userValidator.js
+│   └── ...
+│
+├── services/          # Reusable services (email, PDF generation, etc.)
+│   ├── emailService.js
+│   ├── pdfService.js
+│   └── ...
+│
+├── utils/             # Helper utilities and constants
+├── uploads/           # File uploads (if enabled)
+├── index.js           # Entry point
+└── package.json
+```
 
 ---
 
-## 🛠️ Technology Stack
-- **Backend:** Node.js, Express.js  
-- **Database:** MongoDB (Mongoose + Aggregation Pipelines)  
-- **Realtime:** Socket.IO (announcements, live updates)  
-- **Scheduler:** Node-cron for automated tasks  
-- **AI:** OpenAI API 
-- **Authentication:** JWT with refresh tokens  
+## 🧠 Core Controllers Overview
+
+### 🔑 Auth Controller
+Handles:
+- `register` — Register a new user (Super Admin, Campus Admin, Teacher, Student)
+- `login` — Authenticate and issue JWT
+- `getMe` — Get currently logged-in user
+- `forgotPassword` — Send reset link via Gmail
+- `resetPassword` — Reset password via token
+- `updateUser`, `deleteUser`, `getUserById`, `getAllUsers` — Admin-level user management
 
 ---
 
-## ✅ Why This Project?
-- **Enterprise-ready solution** suitable for large institutions.  
-- Covers **core backend concepts** (authentication, real-time systems, cron jobs, aggregation pipelines).  
-- Demonstrates **real-world SaaS product design** with multi-role access and analytics.  
-- Can be extended into a **full SaaS product** with huge real-world relevance.  
+### 📘 Marksheet Controller
+Handles:
+- `getStudentMarksheet` — Fetch marksheets by filters (role-based)
+- Supports query filters: `studentId`, `classId`, `campusId`, `term`, `academicSession`
+- Generates **individual PDF** per student
+- Zips multiple PDFs into a single downloadable archive when `?downloadZIP=true`
 
 ---
 
-## 📌 Final Note
-This project is designed as a **professional backend system** with real-world use cases.  
-If presented well, it can **stand out as a SaaS product idea** and showcase strong backend expertise.  
+### 🏫 Campus Controller
+Handles:
+- Create and manage campuses
+- Assign and manage campus-admin users
+- Ensure each campus has its respective admin and classes
 
 ---
+
+### 🧑‍🏫 Class Controller
+Handles:
+- Create and manage classes (grade, section)
+- Assign class teacher
+- Manage class-student relationships
+
+---
+
+### 📚 Attendance Controller
+Handles:
+- Record attendance per class and date
+- Supports multiple statuses (`present`, `absent`, `late`, etc.)
+- Allows teachers or admins to view and export attendance
+
+---
+
+### 🧾 Subject Controller
+Handles:
+- Manage subject list per class/campus
+- Associate with marksheets and grading system
+
+---
+
+## 🧩 Middlewares
+
+| Middleware | Purpose |
+|-------------|----------|
+| **authMiddleware.js** | Verifies JWT and attaches user object (`req.user`) |
+| **roleMiddleware.js** | Restricts access based on role |
+| **validationMiddleware.js** | Runs Joi validation on incoming data |
+| **loggingMiddleware.js** | Logs every request (method, path, status, duration) |
+| **errorMiddleware.js** | Handles uncaught errors gracefully |
+
+---
+
+## ✅ Validators (Joi)
+
+Validators ensure data integrity across all API inputs.
+
+| Validator | Purpose |
+|------------|----------|
+| **authValidator.js** | Validate `register`, `login`, `forgotPassword`, and `resetPassword` payloads |
+| **marksheetValidator.js** | Validate marksheet creation — requires valid student, class, and subjects array |
+| **userValidator.js** | Validate user CRUD operations |
+| **classValidator.js** | Validate class creation & update |
+| **campusValidator.js** | Validate campus details |
+
+---
+
+## 📦 Main Dependencies
+
+| Package | Description |
+|----------|-------------|
+| **express** | Web framework for Node.js |
+| **mongoose** | MongoDB object modeling |
+| **jsonwebtoken** | Authentication via JWT |
+| **bcryptjs** | Password hashing |
+| **joi** | Schema validation |
+| **nodemailer** | Email sending for password reset |
+| **json2csv** | Convert JSON data to CSV |
+| **pdfkit / reportlab** | PDF generation for marksheets |
+| **archiver** | Create ZIP files for multiple student PDFs |
+| **dotenv** | Environment variable management |
+| **morgan** | HTTP request logging (optional) |
+
+---
+
+## ⚙️ Environment Variables
+
+Create a `.env` file in the root with:
+
+```env
+PORT=5000
+MONGODB_URI=your_mongo_connection_string
+JWT_SECRET=your_jwt_secret
+EMAIL_USER=your_gmail@example.com
+EMAIL_PASS=your_gmail_app_password
+```
+
+---
+
+## 🧪 API Routes Summary
+
+| Route | Method | Description | Protected |
+|-------|--------|--------------|------------|
+| `/api/auth/register` | POST | Register a user | ❌ |
+| `/api/auth/login` | POST | Login user and return JWT | ❌ |
+| `/api/auth/forgot-password` | POST | Send password reset email | ❌ |
+| `/api/auth/reset-password/:token` | POST | Reset password | ❌ |
+| `/api/users` | GET | Get all users (with filters, pagination, CSV export) | ✅ |
+| `/api/users/:id` | GET | Get single user by ID | ✅ |
+| `/api/users/:id` | PUT | Update user | ✅ |
+| `/api/users/:id` | DELETE | Delete user | ✅ |
+| `/api/marksheets` | GET | Fetch marksheets (supports `downloadZIP=true`) | ✅ |
+| `/api/classes` | CRUD | Manage classes | ✅ |
+| `/api/campuses` | CRUD | Manage campuses | ✅ |
+| `/api/subjects` | CRUD | Manage subjects | ✅ |
+
+---
+
+## 💌 Password Reset Flow (Gmail)
+
+1. **POST `/api/auth/forgot-password`**  
+   Body: `{ "email": "user@example.com" }`  
+   → Sends an email with reset link to Gmail.
+
+2. **Email Content Example:**  
+   ```
+   Click below to reset your password:
+   http://localhost:3000/api/auth/reset-password/<resetToken>
+   ```
+
+3. **POST `/api/auth/reset-password/:token`**  
+   Body: `{ "newPassword": "NewSecure123" }`  
+   → Verifies token, updates password, invalidates token.
+
+---
+
+## ⚙️ Run Locally
+
+```bash
+# Clone the repo
+git clone https://github.com/Sheryaar-Ansar/School-Management-API.git
+cd School-Management-API
+
+# Install dependencies
+npm install
+
+# Start server
+npm run dev
+```
+
+---
+
+## 🧱 Technologies Used
+
+- **Node.js** + **Express.js**
+- **MongoDB** + **Mongoose**
+- **JWT Authentication**
+- **Nodemailer (Gmail SMTP)**
+- **Joi Validation**
+- **Archiver / PDFKit**
+- **json2csv**
+- **dotenv**, **morgan**, **bcryptjs**
+
+---
+
+## 🧭 Future Enhancements
+
+- Integration with frontend dashboard  
+- Graph-based analytics and attendance visualization  
+- Role-based audit logs and activity tracking  
+- Multi-language email templates  
+- AWS S3 file uploads for reports  
+
+---
+
+## 👨‍💻 Author
+
+**Sheryaar Ansar**  **Saad Bin Khalid**
+🌐[https://github.com/Saad0095](https://github.com/Saad0095)
+🌐 [https://github.com/Sheryaar-Ansar](https://github.com/Sheryaar-Ansar)
+
+---
+
+> _“Empowering education management with structured simplicity.”_
