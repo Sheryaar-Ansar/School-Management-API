@@ -65,6 +65,7 @@ export const addScore = async (req, res) => {
 export const getScoresByExam = async (req, res) => {
     try {
         const { role, _id: userId } = req.user
+        const { page = 1, limit = 5 } = req.query
         let filter = {}
         if (role !== 'campus-admin' && role !== 'teacher' && role !== 'super-admin') {
             return res.status(403).json({ message: "Forbidden: You're not allowed to view the scores" });
@@ -103,6 +104,8 @@ export const getScoresByExam = async (req, res) => {
         else if (role === 'super-admin') {
 
         }
+        const skip = (parseInt(page) - 1) * parseInt(limit)
+        const TotalScores = await Score.countDocuments(filter)
         const scores = await Score.find(filter)
             .populate('student', 'name rollNumber')
             .populate('class', 'grade section')
@@ -110,8 +113,16 @@ export const getScoresByExam = async (req, res) => {
             .populate('exam', 'term type totalMarks')
             .populate('campus', 'name location')
             .populate('enteredBy', 'name role')
+            .skip(skip)
+            .limit(limit)
+            .sort({ marksObtained: -1 })
 
-        res.json(scores)
+        res.json({
+            totalScores: TotalScores,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            scores
+        })
     }
     catch (error) {
         res.status(400).json({ error: error.message })
