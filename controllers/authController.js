@@ -1,7 +1,8 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { Parser } from "json2csv";
-import nodemailer from 'nodemailer'
+import nodemailer from "nodemailer";
+import logger from "../utils/logger.js";
 
 const generateToken = (userId, role) => {
   return jwt.sign({ userId, role }, process.env.JWT_SECRET, {
@@ -155,6 +156,7 @@ export const login = async (req, res) => {
 
     const token = generateToken(user._id, user.role);
 
+    logger.info(`User ${user.email} logged in`);
     res.status(200).json({
       message: "Login successful",
       user: {
@@ -166,7 +168,7 @@ export const login = async (req, res) => {
       token,
     });
   } catch (error) {
-    console.error(error);
+    logger.error(`Login failed for ${req.body.email}: ${error.message}`);
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
@@ -367,20 +369,24 @@ export const deleteUser = async (req, res) => {
 
 export const forgetPassword = async (req, res) => {
   try {
-    const { email } = req.body
-    if (!email) return res.status(400).json({ error: "email is required" })
-    const emailExist = await User.findOne({ email: email })
-    if (!emailExist) return res.status(404).json({ error: "User not found" })
-    const resetToken =  jwt.sign({userId: emailExist._id}, process.env.JWT_SECRET, {expiresIn: '5m'})
-    const resetLink = `http://localhost:3000/api/auth/forget-password/${resetToken}`
-    const transport =  nodemailer.createTransport({
-      service: 'gmail',
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "email is required" });
+    const emailExist = await User.findOne({ email: email });
+    if (!emailExist) return res.status(404).json({ error: "User not found" });
+    const resetToken = jwt.sign(
+      { userId: emailExist._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "5m" }
+    );
+    const resetLink = `http://localhost:3000/api/auth/forget-password/${resetToken}`;
+    const transport = nodemailer.createTransport({
+      service: "gmail",
       auth: {
         user: process.env.EMAIL_ID,
-        pass: process.env.EMAIL_PW
-      }
-    })
-        const mailOptions = {
+        pass: process.env.EMAIL_PW,
+      },
+    });
+    const mailOptions = {
       from: `"School System" <${process.env.EMAIL_ID}>`,
       to: email,
       subject: "Password Reset Request",
@@ -393,28 +399,29 @@ export const forgetPassword = async (req, res) => {
         <p>If you didn't request this, please ignore this email.</p>
       `,
     };
-    await transport.sendMail(mailOptions)
-    res.json({message: "Password reset email sent successfully"})
+    await transport.sendMail(mailOptions);
+    res.json({ message: "Password reset email sent successfully" });
   } catch (error) {
-    res.status(500).json({error: error.message})
+    res.status(500).json({ error: error.message });
   }
-}
+};
 
-export const resetPassword = async (req,res) => {
+export const resetPassword = async (req, res) => {
   try {
-      const { token } = req.params
-      const { newPassword } = req.body
-      if(!token) return res.status(400).json({error: "Token missing"})
-      if(!newPassword) return res.status(400).json({error: "Password field required"})
-      
-      const decoded = await jwt.verify(token, process.env.JWT_SECRET)
-      const user = await User.findById(decoded.userId)
-      if(!user) return res.status(404).json({error: "User not found"})
+    const { token } = req.params;
+    const { newPassword } = req.body;
+    if (!token) return res.status(400).json({ error: "Token missing" });
+    if (!newPassword)
+      return res.status(400).json({ error: "Password field required" });
 
-      user.password = newPassword
-      await user.save()
-      res.json({messsage: "Password changed successfully"})
+    const decoded = await jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    user.password = newPassword;
+    await user.save();
+    res.json({ messsage: "Password changed successfully" });
   } catch (error) {
-    res.status(500).json({error: error.message})
+    res.status(500).json({ error: error.message });
   }
-}
+};

@@ -3,17 +3,18 @@ import {
   checkLowAttendanceAndNotify,
   generateMonthlyAttendanceReports,
 } from "../services/reportService.js";
+import logger from "../utils/logger.js";
 
 cron.schedule(
   "0 9 1 * *",
   async () => {
     // cron.schedule("* * * * *", async () => {
-    console.log("Running monthly attendance report cron job...");
+    logger.info("Running monthly attendance report cron job...");
     try {
       await generateMonthlyAttendanceReports();
-      console.log("✅ Monthly attendance reports generated and emailed.");
+      logger.info("✅ Monthly attendance reports generated and emailed.");
     } catch (err) {
-      console.error("❌ Error in cron job:", err);
+      logger.error("❌ Error in cron job:", err);
     }
   },
   {
@@ -22,11 +23,11 @@ cron.schedule(
 );
 
 cron.schedule("0 12 * * 6", async () => {
-  console.log("Running weekly low attendance check...");
+  logger.info("Running weekly low attendance check...");
   try {
     await checkLowAttendanceAndNotify();
-    console.log("✅ Low attendance alerts sent.");
+    logger.info("✅ Low attendance alerts sent.");
   } catch (err) {
-    console.error("Error in low attendance cron:", err);
+    logger.error("Error in low attendance cron:", err);
   }
 });

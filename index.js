@@ -14,13 +14,24 @@ import scoreRoutes from './routes/scoreRoutes.js'
 import marksheetRoutes from './routes/marksheetRoute.js'
 import dashboardRoutes from './routes/dashboardRoutes.js'
 import aiRoutes from './routes/aiRoutes.js'
+import morgan from "morgan";
+import logger from "./utils/logger.js";
+import { errorHandler } from "./middlewares/errorHandler.js";
 
 const app = express();
 
 connectDB();
 app.use(express.json());
 
-// ✅ Health check route
+app.use(
+  morgan("tiny", {
+    stream: {
+      write: (message) => logger.http(message.trim()),
+    },
+  })
+);
+
+// Health check route
 app.get("/health", (req, res) => {
   res.status(200).json({
     status: "ok",
@@ -44,7 +55,9 @@ app.use('/api/result', marksheetRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/ai', aiRoutes)
 
+app.use(errorHandler)
+
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-  console.log(`Server running on localhost:${port}`);
+  logger.info(`Server running on localhost:${port}`);
 });
