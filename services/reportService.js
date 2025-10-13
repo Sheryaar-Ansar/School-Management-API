@@ -56,11 +56,7 @@ export const generateMonthlyAttendanceReports = async () => {
     },
   ]);
 
-  // let count = 0;
   for (const r of reports) {
-    // if (count >= 5) break;
-    console.log(r);
-
     await sendEmailReport(
       {
         totalDays: r.totalDays,
@@ -73,8 +69,6 @@ export const generateMonthlyAttendanceReports = async () => {
       year,
       r._id.email
     );
-
-    // count++;
   }
 };
 

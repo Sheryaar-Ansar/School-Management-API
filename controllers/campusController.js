@@ -1,27 +1,34 @@
-import mongoose from 'mongoose'
-import Campus from '../models/Campus.js'
-import Class from '../models/Class.js'
-import TeacherAssignment from '../models/TeacherAssignment.js'
+import mongoose from "mongoose";
+import Campus from "../models/Campus.js";
+import Class from "../models/Class.js";
+import TeacherAssignment from "../models/TeacherAssignment.js";
+import logger from "../utils/logger.js";
 
 export const createCampus = async (req, res) => {
-    try {
-        const { name, code, address, city, location, contact, campusAdmin } = req.body
-        const existingCampus = await Campus.findOne({ code })
-        if (existingCampus) return res.status(400).json({ error: "Campus with this code already exists" })
-        const newCampus = await Campus.create({
-            name,
-            code,
-            address,
-            city,
-            location,
-            contact,
-            campusAdmin
-        })
-        res.status(201).json(newCampus)
-    } catch (error) {
-        res.status(400).json({ error: error })
-    }
-}
+  try {
+    const { name, code, address, city, location, contact, campusAdmin } =
+      req.body;
+    const existingCampus = await Campus.findOne({ code });
+    if (existingCampus)
+      return res
+        .status(400)
+        .json({ error: "Campus with this code already exists" });
+    const newCampus = await Campus.create({
+      name,
+      code,
+      address,
+      city,
+      location,
+      contact,
+      campusAdmin,
+    });
+    logger.info(`Campus created: ${name} (${code})`);
+    res.status(201).json(newCampus);
+  } catch (error) {
+    logger.error(`Error creating campus: ${error.message}`);
+    res.status(400).json({ error: error });
+  }
+};
 
 export const getAllCampuses = async (req, res) => {
   try {
@@ -133,6 +140,7 @@ export const getAllCampuses = async (req, res) => {
       { $limit: parseInt(limit) },
     ]);
 
+    logger.info(`Fetched campuses page ${page} (limit ${limit})`);
     res.json({
       totalCampuses,
       inActiveCampuses,
@@ -141,16 +149,10 @@ export const getAllCampuses = async (req, res) => {
       campuses,
     });
   } catch (error) {
-    console.error("Error getAllCampuses:", error);
+    logger.error(`Error fetching campuses: ${error.message}`);
     res.status(500).json({ error: error.message });
   }
 };
-
-
-
-
-
-
 
 export const getCampusById = async (req, res) => {
   try {
@@ -242,55 +244,75 @@ export const getCampusById = async (req, res) => {
       },
     ]);
 
-    if (!campus.length)
+    if (!campus.length) {
+      logger.warn(`Campus not found with ID: ${id}`);
       return res.status(404).json({ error: "Campus not found" });
+    }
 
+    logger.info(`Fetched campus details for ID: ${id}`);
     res.json(campus[0]);
   } catch (error) {
+    logger.error(
+      `Error fetching campus by ID (${req.params.id}): ${error.message}`
+    );
     console.error("Error getCampusById:", error);
     res.status(500).json({ error: error.message });
   }
 };
 
-
-
 export const updateCampusDetailsById = async (req, res) => {
-    try {
-        const { id } = req.params
-        const { name, code, address, city, location, contact, campusAdmin } = req.body
-        const updates = { name, code, address, city, location, contact, campusAdmin }
-        const campus = await Campus.findByIdAndUpdate(
-            id,
-            updates,
-            { new: true, runValidators: true }
-        )
-        if (!campus) return res.status(404).json({ error: 'Campus not found' })
-        res.json(campus)
-    } catch (error) {
-        res.status(500).json({ error: error.message })
+  try {
+    const { id } = req.params;
+    const { name, code, address, city, location, contact, campusAdmin } =
+      req.body;
+    const updates = {
+      name,
+      code,
+      address,
+      city,
+      location,
+      contact,
+      campusAdmin,
+    };
+    const campus = await Campus.findByIdAndUpdate(id, updates, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!campus) {
+      logger.warn(`Campus update failed: Not found (${id})`);
+      return res.status(404).json({ error: "Campus not found" });
     }
 
-}
+    logger.info(`Campus updated: ${campus.name} (${id})`);
+    res.json(campus);
+  } catch (error) {
+    logger.error(`Error updating campus (${req.params.id}): ${error.message}`);
+    res.status(500).json({ error: error.message });
+  }
+};
 
 export const deleteCampusById = async (req, res) => {
-    try {
-        const { id } = req.params
-        const deleteCampus = await Campus.findByIdAndUpdate(
-            id,
-            { isActive: false },
-            { new: true, runValidators: true }
-        )
-        if (!deleteCampus) return res.status(404).json({ error: 'Campus not found' })
-        res.json({ message: `${deleteCampus.name} deleted succesfully!` })
-    } catch (error) {
-        res.status(400).json({ error: error.message })
+  try {
+    const { id } = req.params;
+    const deletedCampus = await Campus.findByIdAndUpdate(
+      id,
+      { isActive: false },
+      { new: true, runValidators: true }
+    );
+
+    if (!deletedCampus) {
+      logger.warn(`Campus delete failed: Not found (${id})`);
+      return res.status(404).json({ error: "Campus not found" });
     }
-}
 
-
-//--------------------------------------------------------------------
-// -- Campus Details for Campus Admin -- //
-//--------------------------------------------------------------------
+    logger.info(`Campus deactivated: ${deletedCampus.name} (${id})`);
+    res.json({ message: `${deletedCampus.name} deleted successfully!` });
+  } catch (error) {
+    logger.error(`Error deleting campus (${req.params.id}): ${error.message}`);
+    res.status(400).json({ error: error.message });
+  }
+};
 
 // Returns campus details (teachers & students) for the campus the authenticated campus-admin belongs to
 export const getCampusDetails = async (req, res) => {
@@ -301,7 +323,7 @@ export const getCampusDetails = async (req, res) => {
     const campusIds = new Set();
     const classIds = new Set();
 
-    // 🔹 Campus Admin Logic
+    // Campus Admin Logic
     if (role === "campus-admin") {
       const campus = await Campus.findOne({
         campusAdmin: userId,
@@ -309,7 +331,9 @@ export const getCampusDetails = async (req, res) => {
       }).select("_id");
 
       if (!campus)
-        return res.status(404).json({ error: "Campus not found for this admin" });
+        return res
+          .status(404)
+          .json({ error: "Campus not found for this admin" });
 
       campusIds.add(campus._id.toString());
 
@@ -328,7 +352,7 @@ export const getCampusDetails = async (req, res) => {
       }
     }
 
-    // 🔹 Teacher Logic (Subject / Class Teacher)
+    // Teacher Logic (Subject / Class Teacher)
     else if (role === "teacher") {
       const ta = await TeacherAssignment.findOne({
         teacher: userId,
@@ -348,7 +372,6 @@ export const getCampusDetails = async (req, res) => {
         });
       }
 
-      // If not subject teacher, check if class teacher
       if (classIds.size === 0) {
         const cls = await Class.findOne({
           classTeacher: userId,
@@ -380,10 +403,8 @@ export const getCampusDetails = async (req, res) => {
       (id) => new mongoose.Types.ObjectId(id)
     );
 
-    // ---------- AGGREGATION PIPELINE ----------
     const pipeline = [{ $match: { _id: { $in: campusIdArray } } }];
 
-    // 🔸 Role-Based Lookups
     if (role === "campus-admin") {
       // Admin sees total across campus
       pipeline.push(
@@ -447,7 +468,6 @@ export const getCampusDetails = async (req, res) => {
       );
     }
 
-    // 🔹 Teacher-specific data
     if (role === "teacher") {
       // Restrict to only their assigned/enrolled classes
       pipeline.push(
@@ -507,7 +527,6 @@ export const getCampusDetails = async (req, res) => {
       );
     }
 
-    // ✅ Projection based on role
     const baseProject = {
       name: 1,
       city: 1,
@@ -524,7 +543,6 @@ export const getCampusDetails = async (req, res) => {
 
     pipeline.push({ $project: baseProject });
 
-    // ---------- EXECUTION ----------
     const campusDetails = await Campus.aggregate(pipeline);
 
     if (!campusDetails.length)
@@ -536,17 +554,8 @@ export const getCampusDetails = async (req, res) => {
       totalDetails: campusDetails.length,
       campusDetails,
     });
-  } catch (err) {
-    console.error("Error getCampusDetails:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    logger.error(`Error fetching campus details (${req.user._id}): ${error.message}`);
+    res.status(500).json({ error: error.message });
   }
 };
-
-
-
-
-
-
-
-
-

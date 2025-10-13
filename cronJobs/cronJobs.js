@@ -6,9 +6,9 @@ import {
 import logger from "../utils/logger.js";
 
 cron.schedule(
-  "0 9 1 * *",
+  // "0 9 1 * *",
+  "* * * * *",
   async () => {
-    // cron.schedule("* * * * *", async () => {
     logger.info("Running monthly attendance report cron job...");
     try {
       await generateMonthlyAttendanceReports();
@@ -22,12 +22,18 @@ cron.schedule(
   }
 );
 
-cron.schedule("0 12 * * 6", async () => {
-  logger.info("Running weekly low attendance check...");
-  try {
-    await checkLowAttendanceAndNotify();
-    logger.info("✅ Low attendance alerts sent.");
-  } catch (err) {
-    logger.error("Error in low attendance cron:", err);
+cron.schedule(
+  "0 12 * * 6",
+  async () => {
+    logger.info("Running weekly low attendance check...");
+    try {
+      await checkLowAttendanceAndNotify();
+      logger.info("✅ Low attendance alerts sent.");
+    } catch (err) {
+      logger.error("Error in low attendance cron:", err);
+    }
+  },
+  {
+    timezone: "Asia/Karachi",
   }
-});
+);

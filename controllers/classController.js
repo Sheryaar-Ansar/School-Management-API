@@ -1,12 +1,11 @@
 import Campus from "../models/Campus.js";
 import Class from "../models/Class.js";
 import TeacherAssignment from "../models/TeacherAssignment.js";
+import logger from "../utils/logger.js";
 
 
 export const createClass = async (req, res) => {
   try {
-    console.log("req.user", req.user);
-    
     const { grade, section, subjects, classTeacher, campus } = req.body;
     const newClass = await Class.create({
       grade,
@@ -121,7 +120,7 @@ export const getAllClasses = async (req, res) => {
       data: classes,
     });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     res.status(400).json({ error: error.message });
   }
 };
