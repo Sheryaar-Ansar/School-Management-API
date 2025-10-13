@@ -18,8 +18,8 @@ export const markBulkStudentAttendance = async (req, res) => {
     let classRec;
 
     if (req.user.role === "teacher") {
-      const teacherAssignment = await TeacherAssignment.findOne({
-        teacher: req.user._id,
+      const teacherAssignment = await Class.findOne({
+        classTeacher: req.user._id,
       });
 
       if (!teacherAssignment)
@@ -27,7 +27,7 @@ export const markBulkStudentAttendance = async (req, res) => {
           .status(403)
           .json({ message: "You are not assigned to any class" });
 
-      classRec = await Class.findById(teacherAssignment.class);
+      classRec = await Class.findById(teacherAssignment._id);
       if (!classRec)
         return res
           .status(404)
