@@ -4,6 +4,7 @@ import TeacherAssignment from '../models/TeacherAssignment.js';
 import Assignment from '../models/Assignment.js';
 import Class from '../models/Class.js';
 import express from 'express';
+import Exam from '../models/Exam.js';
 
 export const addScore = async (req, res) => {
     try {
@@ -65,7 +66,7 @@ export const addScore = async (req, res) => {
 export const getScoresByExam = async (req, res) => {
     try {
         const { role, _id: userId } = req.user
-        const { page = 1, limit = 5 } = req.query
+        const { page = 1, limit = 5, term, academicSession } = req.query
         let filter = {}
         if (role !== 'campus-admin' && role !== 'teacher' && role !== 'super-admin') {
             return res.status(403).json({ message: "Forbidden: You're not allowed to view the scores" });
@@ -103,6 +104,17 @@ export const getScoresByExam = async (req, res) => {
         }
         else if (role === 'super-admin') {
 
+        }
+        let filterExam = {}
+        if(academicSession){
+            filterExam.academicSession = academicSession
+        }
+        if(term){
+            filterExam.term = term
+        }
+        if(Object.keys(filterExam).length > 0){
+            const exams = await Exam.find(filterExam).select('_id')
+            filter.exam = {$in: exams.map(e=>e._id)}
         }
         const skip = (parseInt(page) - 1) * parseInt(limit)
         const TotalScores = await Score.countDocuments(filter)

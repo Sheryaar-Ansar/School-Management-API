@@ -4,6 +4,7 @@ import Assignment from '../models/Assignment.js'
 import Campus from '../models/Campus.js'
 import User from '../models/User.js'
 import logger from '../utils/logger.js'
+import Class from '../models/Class.js'
 
 //----------------------------------------------------------------------
 // --- Teacher Assignment Controllers -- // 
@@ -402,7 +403,12 @@ export const getStudentEnrollments = async (req, res) => {
                     .json({ error: "No campus assigned to this admin" })
             }
             filter.campus = campus._id
-        } else {
+        } else if(role === 'teacher'){
+            const classTeacher = await Class.findOne({ classTeacher: _id })
+            if(!classTeacher) return res.status(404).json({error: "You are not assigned as class teacher in any class"})
+            filter.class = classTeacher._id
+        }
+        else {
             return res
                 .status(403)
                 .json({ error: "Access denied. Only admins can view enrollments." })
