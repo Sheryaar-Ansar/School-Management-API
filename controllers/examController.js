@@ -50,7 +50,7 @@ export const createExam = async (req,res) => {
 export const getAllExams = async (req,res) => {
     try {
         const { role, _id: userId } = req.user;
-        const { campusId, page = 1, limit = 5 } = req.query;
+        const { campusId, page = 1, limit = 5, term, academicSession } = req.query;
         let filter = {};
 
         if (role === "campus-admin") {
@@ -64,6 +64,12 @@ export const getAllExams = async (req,res) => {
             if (campusId) {
                 filter.campus = campusId;
             }
+        }
+        if(term){
+            filter.term = term
+        }
+        if(academicSession){
+            filter.academicSession = academicSession
         }
         const skip = (parseInt(page - 1)) * parseInt(limit)
         const exams = await Exam.find(filter)
