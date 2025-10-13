@@ -265,7 +265,67 @@ npm run dev
 
 ---
 
-## 👨‍💻 Author
+## � Remaining / Implemented Features (details)
+
+This project already includes many of the building blocks listed below. The sections summarize what's implemented and what you can enable or extend easily.
+
+- Node-cron (scheduled jobs)
+   - Purpose: automate monthly attendance report generation and weekly low-attendance checks.
+   - Location: `cronJobs/cronJobs.js` calls `services/reportService.js`.
+   - Notes: Cron schedule runs in server process — in production use a dedicated worker or external scheduler for reliability.
+
+- Attendance reports & low-attendance checks
+   - Purpose: Aggregation pipelines compute per-student attendance percentages and optionally email students when below threshold.
+   - Location: `services/reportService.js`, `utils/nodemailer.js` (email templates), and a manual trigger route can be added for on-demand generation.
+
+- AI study recommendations (OpenRouter integration)
+   - Purpose: Generate short, personalized study recommendations using the OpenRouter API (model prompts tuned in code).
+   - Location: `controllers/aiController.js`, `models/Score.js` (marksheet AI remarks), and `routes/aiRoutes.js`.
+   - Notes: Requires `OPENROUTER_API_KEY` in environment variables.
+
+- json2csv (CSV export)
+   - Purpose: Convert user and report JSON data into CSV for admins/downloads.
+   - Location: Implemented in `controllers/authController.js` (CSV export example for users).
+
+- Nodemailer (email sending)
+   - Purpose: Send password reset links and attendance reports via Gmail SMTP or other providers.
+   - Location: `utils/nodemailer.js` and usages in `controllers/authController.js` and reporting services.
+   - Notes: Requires SMTP credentials in `.env` (SMTP_USER/SMTP_PASS or EMAIL_USER/EMAIL_PASS).
+
+- Password reset flow & archiver for attachments
+   - Purpose: Password reset via time-limited JWT tokens. Archiver used to create ZIPs of marksheets for batch download.
+   - Location: `controllers/authController.js` (forgot/reset password), `controllers/marksheetController.js` (PDF & ZIP export using `pdfkit` + `archiver`).
+
+- Bcryptjs + JWT
+   - Purpose: Password hashing and session/token management.
+   - Location: `models/User.js` (pre-save hashing using `bcryptjs`), `controllers/authController.js` (login/jwt issuance).
+
+- CRUD for campuses, classes, users, enrollments, assignments, exams, scores, attendance
+   - Purpose: Full management endpoints for all core entities.
+   - Location: See `controllers/` and `routes/` folders — most controllers and routes are scaffolded (auth, campus, class, enrollment, exam, score, attendance). Use standard RESTful patterns and validation middlewares already in place.
+
+- Aggregation analytics & dashboard data
+   - Purpose: Provide aggregate metrics for dashboards (attendance rates, top/bottom students, average scores per class, pass/fail statistics).
+   - Location: `services/reportService.js` contains example aggregation queries; you can extend them into dedicated dashboard endpoints.
+
+- Pagination & filtering
+   - Purpose: Use query parameters for pagination and filtering across list endpoints (e.g., `?page=1&limit=20&role=teacher`).
+   - Location: Implemented in several controllers (for example `controllers/authController.js` for users). Apply the same pattern to other list endpoints.
+
+- PDFKit for marksheets
+   - Purpose: Generate printable PDF marksheets per student and zip multiple marksheets for download.
+   - Location: `controllers/marksheetController.js` (uses `pdfkit` and `archiver`).
+
+- OpenRouter AI integration for study recommendations
+   - Purpose: Short AI-generated study recommendations are created from student scores and included in marksheets or returned by endpoints.
+   - Location: `config/openrouter.js`, `controllers/aiController.js`, and `models/Score.js` (AI remark generation during marksheet creation).
+
+
+
+
+
+
+## �👨‍💻 Author
 
 **Sheryaar Ansar**  **Saad Bin Khalid**
 🌐[https://github.com/Saad0095](https://github.com/Saad0095)
