@@ -7,10 +7,12 @@ import {
   deleteClass,
 } from "../controllers/classController.js";
 import { authenticate, authRole } from "../middlewares/authMiddleware.js";
+import { schemaValidation } from '../middlewares/validate.js'
+import { classValidationSchema } from '../validators/classValidator.js'
 
 const router = express.Router();
 
-router.post("/", authenticate, authRole(["campus-admin", 'super-admin']), createClass);
+router.post("/", schemaValidation(classValidationSchema), authenticate, authRole(["campus-admin", 'super-admin']), createClass);
 router.get("/", authenticate, authRole(["campus-admin", 'super-admin', 'teacher']), getAllClasses);
 router.get("/:id", authenticate, authRole(["campus-admin", 'super-admin', 'teacher']), getClassById);
 router.put("/:id", authenticate, authRole(["campus-admin", 'super-admin']), updateClass);

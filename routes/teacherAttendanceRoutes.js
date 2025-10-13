@@ -2,10 +2,12 @@ import express from "express";
 
 import { authenticate, authRole } from "../middlewares/authMiddleware.js";
 import { deleteTeacherAttendance, getAllTeacherAttendance, getTeacherAttendance, markTeacherAttendance, teacherCheckOut, updateTeacherAttendance } from "../controllers/teacherAttendanceController.js";
+import { schemaValidation } from '../middlewares/validate.js'
+import { teacherAttendanceValidator } from '../validators/teacherAttendanceValidator.js'
 
 const router = express.Router();
 
-router.post("/markAttendance", authenticate, authRole(["teacher","campus-admin", "super-admin"]), markTeacherAttendance);
+router.post("/markAttendance", schemaValidation(teacherAttendanceValidator), authenticate, authRole(["teacher","campus-admin", "super-admin"]), markTeacherAttendance);
 router.put("/checkout", authenticate, authRole(["teacher", "campus-admin", "super-admin"]), teacherCheckOut);
 router.get("/", authenticate, authRole(["campus-admin", "super-admin"]), getAllTeacherAttendance);
 router.get("/:teacherId", authenticate, authRole(["campus-admin", "super-admin"]), getTeacherAttendance);
