@@ -29,9 +29,7 @@ export const markBulkStudentAttendance = async (req, res) => {
 
       classRec = await Class.findById(teacherAssignment.class);
       if (!classRec)
-        return res
-          .status(404)
-          .json({ message: "Assigned class not found" });
+        return res.status(404).json({ message: "Assigned class not found" });
     } else {
       classRec = await Class.findById(classId);
       if (!classRec)
@@ -82,7 +80,11 @@ export const markBulkStudentAttendance = async (req, res) => {
       });
 
       if (alreadyMarked) {
-        attendanceResults.push({ rollNumber, status, message: "Already marked" });
+        attendanceResults.push({
+          rollNumber,
+          status,
+          message: "Already marked",
+        });
         continue;
       }
 
@@ -113,7 +115,6 @@ export const markBulkStudentAttendance = async (req, res) => {
     });
   }
 };
-
 
 export const getAllStudentsAttendance = async (req, res) => {
   try {
@@ -216,9 +217,10 @@ export const getAllStudentsAttendance = async (req, res) => {
     );
 
     res.json({
-      records,
-      countSummary,
       total: records.length,
+      countSummary,
+      page: pageNumber,
+      records,
     });
   } catch (err) {
     res.status(500).json({
@@ -315,8 +317,9 @@ export const getStudentAttendance = async (req, res) => {
 
     res.json({
       total: records.length,
-      records,
+      page: pageNumber,
       countSummary,
+      records,
     });
   } catch (err) {
     res.status(500).json({

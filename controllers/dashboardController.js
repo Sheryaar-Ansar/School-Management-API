@@ -1,43 +1,89 @@
+import mongoose from "mongoose";
 import Campus from "../models/Campus.js";
-import Class from "../models/Class.js";
 import Score from "../models/Score.js";
 import User from "../models/User.js";
 
 export const getOverviewStats = async (req, res) => {
   try {
+    const { from, to, campusId } = req.query;
+    let filter = {};
+
+    if (req.user.role === "campus-admin") {
+      filter.createdBy = req.user._id;
+    } else if (campusId) {
+      const campus = await Campus.findById(campusId);
+      if (!campus) return res.status(404).json({ message: "Campus not found" });
+      filter.createdBy = campus.campusAdmin;
+    }
+
+    if (from || to) {
+      filter.createdAt = {};
+      if (from) filter.createdAt.$gte = new Date(`${from}T00:00:00.000Z`);
+      if (to) filter.createdAt.$lte = new Date(`${to}T23:59:59.999Z`);
+    }
+
     const [campusCount, studentCount, teacherCount] = await Promise.all([
-      Campus.countDocuments(),
-      User.countDocuments({ role: "student", isActive: true }),
-      User.countDocuments({ role: "teacher", isActive: true }),
+      req.user.role === "super-admin" ? Campus.countDocuments() : 1,
+      User.countDocuments({
+        role: "student",
+        isActive: true,
+        ...filter,
+      }),
+      User.countDocuments({
+        role: "teacher",
+        isActive: true,
+        ...filter,
+      }),
     ]);
 
     return res.status(200).json({
-      success: true,
       data: { campusCount, studentCount, teacherCount },
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
 export const getTopPerformers = async (req, res) => {
   try {
-    const { campusId } = req.query;
-    let campusFilter = {};
+    const { campusId, academicSession, term } = req.query;
+    let filter = {};
 
     if (req.user.role === "campus-admin") {
       const campus = await Campus.findOne({ campusAdmin: req.user._id });
-      if (!campus)
-        return res
-          .status(404)
-          .json({ success: false, message: "Campus not found" });
-      campusFilter.campus = campus._id;
+      if (!campus) return res.status(404).json({ message: "Campus not found" });
+      filter.campus = campus._id;
     } else if (campusId) {
-      campusFilter.campus = new mongoose.Types.ObjectId(campusId);
+      if (!mongoose.Types.ObjectId.isValid(campusId))
+        return res.status(400).json({ message: "Invalid campusId" });
+      filter.campus = new mongoose.Types.ObjectId(campusId);
     }
 
+    const matchStage = { ...filter };
+
     const topPerformers = await Score.aggregate([
-      { $match: campusFilter },
+      { $match: matchStage },
+      {
+        $lookup: {
+          from: "exams",
+          localField: "exam",
+          foreignField: "_id",
+          as: "exam",
+        },
+      },
+      { $unwind: "$exam" },
+      ...(academicSession || term
+        ? [
+            {
+              $match: {
+                ...(academicSession && {
+                  "exam.academicSession": academicSession,
+                }),
+                ...(term && { "exam.term": term }),
+              },
+            },
+          ]
+        : []),
       {
         $lookup: {
           from: "users",
@@ -49,7 +95,7 @@ export const getTopPerformers = async (req, res) => {
       { $unwind: "$student" },
       {
         $lookup: {
-          from: "campuses",
+          from: "campus",
           localField: "campus",
           foreignField: "_id",
           as: "campus",
@@ -58,31 +104,85 @@ export const getTopPerformers = async (req, res) => {
       { $unwind: "$campus" },
       {
         $group: {
-          _id: { campus: "$campus.name", student: "$student.name" },
+          _id: {
+            campusId: "$campus._id",
+            campusName: "$campus.name",
+            studentId: "$student._id",
+            studentName: "$student.name",
+          },
+          totalMarks: { $sum: "$marksObtained" },
           avgMarks: { $avg: "$marksObtained" },
+          examCount: { $sum: 1 },
+        },
+      },
+      {
+        $addFields: {
+          avgPercentage: {
+            $round: [{ $divide: ["$totalMarks", "$examCount"] }, 2],
+          },
         },
       },
       { $sort: { avgMarks: -1 } },
       {
         $group: {
-          _id: "$_id.campus",
+          _id: {
+            campusId: "$_id.campusId",
+            campusName: "$_id.campusName",
+          },
           topStudents: {
-            $push: { name: "$_id.student", avgMarks: "$avgMarks" },
+            $push: {
+              studentId: "$_id.studentId",
+              name: "$_id.studentName",
+              avgMarks: "$avgMarks",
+              avgPercentage: "$avgPercentage",
+            },
           },
         },
       },
       {
         $project: {
-          campus: "$_id",
-          topStudents: { $slice: ["$topStudents", 3] },
           _id: 0,
+          campusId: "$_id.campusId",
+          campusName: "$_id.campusName",
+          topStudents: { $slice: ["$topStudents", 3] },
         },
       },
     ]);
 
-    res.status(200).json({ success: true, data: topPerformers });
+    if (req.user.role === "super-admin" && !campusId) {
+      const allCampuses = await Campus.find({}, "_id name");
+      const resultWithMissing = allCampuses.map((c) => {
+        const found = topPerformers.find(
+          (p) => p.campusId.toString() === c._id.toString()
+        );
+        return (
+          found || {
+            campusId: c._id,
+            campusName: c.name,
+            topStudents: [],
+          }
+        );
+      });
+      return res.status(200).json({
+        success: true,
+        filtersApplied: {
+          academicSession: academicSession || "All",
+          term: term || "All",
+        },
+        data: resultWithMissing,
+      });
+    }
+
+    res.status(200).json({
+      filtersApplied: {
+        academicSession: academicSession || "All",
+        term: term || "All",
+      },
+      data: topPerformers,
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Error in getting Top Performers:", error);
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -92,22 +192,13 @@ export const getDropRatio = async (req, res) => {
     const match = { role: "student" };
 
     if (req.user.role === "campus-admin") {
-      const campus = await Campus.findOne({ campusAdmin: req.user._id });
-      if (!campus)
-        return res
-          .status(404)
-          .json({ success: false, message: "Campus not found" });
-      match.campus = campus._id;
       match.createdBy = req.user._id;
     } else if (campusId) {
       const campus = await Campus.findById(campusId);
-      if (!campus)
-        return res
-          .status(404)
-          .json({ success: false, message: "Campus not found" });
+      if (!campus) return res.status(404).json({ message: "Campus not found" });
       match.createdBy = campus.campusAdmin;
     }
-    
+
     if (from && to)
       match.createdAt = { $gte: new Date(from), $lte: new Date(to) };
 
@@ -121,7 +212,6 @@ export const getDropRatio = async (req, res) => {
       totalStudents === 0 ? 0 : (inactiveStudents / totalStudents) * 100;
 
     res.status(200).json({
-      success: true,
       data: {
         totalStudents,
         inactiveStudents,
@@ -129,19 +219,17 @@ export const getDropRatio = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
-/* --------------------------------------------------
- 🏫 4️⃣ CAMPUS COMPARISON (Average results)
--------------------------------------------------- */
+
 export const getCampusComparison = async (req, res) => {
   try {
     const comparison = await Score.aggregate([
       {
         $lookup: {
-          from: "campuses",
+          from: "campus",
           localField: "campus",
           foreignField: "_id",
           as: "campus",
@@ -161,69 +249,13 @@ export const getCampusComparison = async (req, res) => {
           campusId: "$_id.campusId",
           campusName: "$_id.campusName",
           averageResult: { $round: ["$averageResult", 2] },
-          totalExams: 1,
         },
       },
       { $sort: { averageResult: -1 } },
     ]);
 
-    res.status(200).json({ success: true, data: comparison });
+    res.status(200).json({ data: comparison });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-/* --------------------------------------------------
- 📊 5️⃣ ATTENDANCE & SUBJECT PERFORMANCE TRENDS
--------------------------------------------------- */
-export const getAttendanceAndSubjectTrends = async (req, res) => {
-  try {
-    // Attendance trend per month
-    const attendanceTrend = await StudentAttendance.aggregate([
-      {
-        $group: {
-          _id: { $month: "$date" },
-          totalDays: { $sum: 1 },
-          presentDays: { $sum: { $cond: ["$isPresent", 1, 0] } },
-        },
-      },
-      {
-        $project: {
-          month: "$_id",
-          attendancePercentage: {
-            $multiply: [{ $divide: ["$presentDays", "$totalDays"] }, 100],
-          },
-          _id: 0,
-        },
-      },
-      { $sort: { month: 1 } },
-    ]);
-
-    // Subject-wise performance
-    const subjectPerformance = await Score.aggregate([
-      {
-        $lookup: {
-          from: "subjects",
-          localField: "subject",
-          foreignField: "_id",
-          as: "subject",
-        },
-      },
-      { $unwind: "$subject" },
-      {
-        $group: {
-          _id: "$subject.name",
-          avgMarks: { $avg: "$marksObtained" },
-        },
-      },
-      { $sort: { avgMarks: -1 } },
-    ]);
-
-    res.status(200).json({
-      success: true,
-      data: { attendanceTrend, subjectPerformance },
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
