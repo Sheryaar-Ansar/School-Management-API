@@ -19,7 +19,7 @@ router.post('/assign-teacher/:id/delete', authenticate, authRole(['super-admin',
 // --- Student Enrollment Routes -- //
 //----------------------------------------------------------------------
 router.post('/enroll-student', schemaValidation(studentAssignmentSchema), authenticate, authRole(['super-admin', 'campus-admin']), enrollStudent)
-router.get('/student-enrollments', authenticate, authRole(['super-admin', 'campus-admin']), getStudentEnrollments)
+router.get('/student-enrollments', authenticate, authRole(['super-admin', 'campus-admin', 'teacher']), getStudentEnrollments)
 router.patch('/enroll-student/:id', authenticate, authRole(['super-admin', 'campus-admin']), updateStudentEnrollment)
 router.post('/enroll-student/:id/delete', authenticate, authRole(['super-admin', 'campus-admin']), deleteStudentEnrollment)
 
