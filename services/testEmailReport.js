@@ -28,7 +28,8 @@ const testGenerateSingleReport = async () => {
 
     const studentName = record.enrollment.student.name;
     // const studentEmail = record.enrollment.student.email;
-    const studentEmail = "saadkhalid0095@gmail.com";
+    const studentEmail = "saadbinkhalid1895@gmail.com";
+    // const studentEmail = "sheryaarlong@gmail.com";
 
     // Prepare a fake monthly report
     const report = {
