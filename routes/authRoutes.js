@@ -11,11 +11,13 @@ import {
   getUserById,
 } from "../controllers/authController.js";
 import { authenticate, authRole } from "../middlewares/authMiddleware.js";
+import { schemaValidation } from '../middlewares/validate.js'
+import { registerSchema } from '../validators/authValidator.js'
 const router = express.Router();
 
-router.post("/createSuperAdmin", register);    
-router.post("/register-admin", authenticate, authRole(["super-admin"]), registerCampusAdmin);
-router.post("/add-user", authenticate, authRole(["campus-admin", 'super-admin']), addTeacherStudent);
+router.post("/createSuperAdmin", schemaValidation(registerSchema), register);    
+router.post("/register-admin", schemaValidation(registerSchema), authenticate, authRole(["super-admin"]), registerCampusAdmin);
+router.post("/add-user", schemaValidation(registerSchema), authenticate, authRole(["campus-admin", 'super-admin']), addTeacherStudent);
 router.post("/login", login);
 router.get("/me", authenticate, getMe);
 router.get("/users", authenticate, authRole(["super-admin", "campus-admin"]), getAllUsers);

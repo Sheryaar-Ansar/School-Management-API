@@ -1,9 +1,11 @@
 import { createCampus, getAllCampuses, getCampusById, updateCampusDetailsById, deleteCampusById, getCampusDetails } from '../controllers/campusController.js'
 import { authenticate, authRole } from '../middlewares/authMiddleware.js'
+import { schemaValidation } from '../middlewares/validate.js'
+import { campusValidator } from '../validators/campusValidator.js'
 import express from 'express'
 const router = express.Router()
 
-router.post('/', authenticate, authRole(['super-admin']), createCampus)
+router.post('/', schemaValidation(campusValidator), authenticate, authRole(['super-admin']), createCampus)
 router.get('/', authenticate, authRole(['super-admin']), getAllCampuses)
 router.get('/details', authenticate, authRole(['campus-admin', 'super-admin', 'teacher']), getCampusDetails)
 router.get('/:id', authenticate, authRole(['super-admin']), getCampusById)
