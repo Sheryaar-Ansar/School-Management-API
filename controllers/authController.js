@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { Parser } from "json2csv";
+import nodemailer from 'nodemailer'
 
 const generateToken = (userId, role) => {
   return jwt.sign({ userId, role }, process.env.JWT_SECRET, {
@@ -363,3 +364,57 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const forgetPassword = async (req, res) => {
+  try {
+    const { email } = req.body
+    if (!email) return res.status(400).json({ error: "email is required" })
+    const emailExist = await User.findOne({ email: email })
+    if (!emailExist) return res.status(404).json({ error: "User not found" })
+    const resetToken =  jwt.sign({userId: emailExist._id}, process.env.JWT_SECRET, {expiresIn: '5m'})
+    const resetLink = `http://localhost:3000/api/auth/forget-password/${resetToken}`
+    const transport =  nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_ID,
+        pass: process.env.EMAIL_PW
+      }
+    })
+        const mailOptions = {
+      from: `"School System" <${process.env.EMAIL_ID}>`,
+      to: email,
+      subject: "Password Reset Request",
+      html: `
+        <h2>Password Reset Request</h2>
+        <p>Hello ${emailExist.name || ""},</p>
+        <p>You requested to reset your password. Click below to continue:</p>
+        <a href="${resetLink}" target="_blank">${resetLink}</a>
+        <p>This link will expire in 5 minutes.</p>
+        <p>If you didn't request this, please ignore this email.</p>
+      `,
+    };
+    await transport.sendMail(mailOptions)
+    res.json({message: "Password reset email sent successfully"})
+  } catch (error) {
+    res.status(500).json({error: error.message})
+  }
+}
+
+export const resetPassword = async (req,res) => {
+  try {
+      const { token } = req.params
+      const { newPassword } = req.body
+      if(!token) return res.status(400).json({error: "Token missing"})
+      if(!newPassword) return res.status(400).json({error: "Password field required"})
+      
+      const decoded = await jwt.verify(token, process.env.JWT_SECRET)
+      const user = await User.findById(decoded.userId)
+      if(!user) return res.status(404).json({error: "User not found"})
+
+      user.password = newPassword
+      await user.save()
+      res.json({messsage: "Password changed successfully"})
+  } catch (error) {
+    res.status(500).json({error: error.message})
+  }
+}

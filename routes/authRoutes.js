@@ -9,16 +9,22 @@ import {
   registerCampusAdmin,
   addTeacherStudent,
   getUserById,
+  forgetPassword,
+  resetPassword
 } from "../controllers/authController.js";
 import { authenticate, authRole } from "../middlewares/authMiddleware.js";
+import { schemaValidation } from '../middlewares/validate.js'
+import { registerSchema } from '../validators/authValidator.js'
 const router = express.Router();
 
-router.post("/createSuperAdmin", register);    
-router.post("/register-admin", authenticate, authRole(["super-admin"]), registerCampusAdmin);
-router.post("/add-user", authenticate, authRole(["campus-admin", 'super-admin']), addTeacherStudent);
+router.post("/createSuperAdmin", schemaValidation(registerSchema), register);    
+router.post("/register-admin", schemaValidation(registerSchema), authenticate, authRole(["super-admin"]), registerCampusAdmin);
+router.post("/add-user", schemaValidation(registerSchema), authenticate, authRole(["campus-admin", 'super-admin']), addTeacherStudent);
 router.post("/login", login);
 router.get("/me", authenticate, getMe);
 router.get("/users", authenticate, authRole(["super-admin", "campus-admin"]), getAllUsers);
+router.post('/forget-password', forgetPassword)
+router.post('/reset-password/:token', resetPassword)
 router.get("/users/:id", authenticate, authRole(["super-admin", "campus-admin"]), getUserById);
 router.put("/users/:id", authenticate, authRole(["super-admin", "campus-admin"]), updateUser);
 router.delete("/users/:id", authenticate, authRole(["super-admin","campus-admin"]), deleteUser);

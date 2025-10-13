@@ -48,7 +48,7 @@ export async function generateMarksheet(scoreDoc) {
     .find({ student: scoreDoc.student, class: scoreDoc.class })
     .populate("exam", "term academicSession totalMarks")
     .populate("subject", "name")
-    .populate("student", "name"); // ✅ Get student name for AI remarks
+    .populate("student", "name"); 
 
   const termScores = allScores.filter(
     (s) => s.exam && s.exam.term === term && s.exam.academicSession === academicSession
@@ -61,7 +61,6 @@ export async function generateMarksheet(scoreDoc) {
     return;
   }
 
-  // ✅ Build subject data
   const subjectMap = new Map();
   for (const s of termScores) {
     const subId = s.subject._id.toString();
@@ -83,14 +82,12 @@ export async function generateMarksheet(scoreDoc) {
   const grandPercentage = (grandObtained / grandTotal) * 100;
   const overallGrade = getGrade(grandPercentage);
 
-  // ✅ Default human-readable remark (fallback)
   let finalRemarks = "Needs Improvement";
   if (overallGrade === "A+" || overallGrade === "A") finalRemarks = "Excellent";
   else if (overallGrade === "B") finalRemarks = "Very Good";
   else if (overallGrade === "C") finalRemarks = "Good";
   else if (overallGrade === "D") finalRemarks = "Fair";
 
-  // 🧠 Generate AI-based remark
   try {
     const prompt = `
 You are a teacher writing brief report card feedback.
