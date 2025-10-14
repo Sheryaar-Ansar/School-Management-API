@@ -6,7 +6,8 @@ import {
 import logger from "../utils/logger.js";
 
 cron.schedule(
-  "0 9 1 * *",
+  // "0 9 1 * *",
+  "* * * * *",
   async () => {
     logger.info("Running monthly attendance report cron job...");
     try {

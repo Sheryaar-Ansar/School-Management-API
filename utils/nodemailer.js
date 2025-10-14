@@ -2,6 +2,12 @@ import nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
+  secure: true,
+  pool: true,
+    maxConnections: 5,        // how many parallel connections
+  maxMessages: 100,         // max messages per connection before recycling
+  rateDelta: 2000,          // time window in ms for rate limit
+  rateLimit: 5,             // max 5 emails per 2 seconds
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
@@ -9,22 +15,37 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendEmailReport = async (report, month, year, recipientEmail) => {
-  const attendanceStatus = report.attendancePercentage >= 75
-    ? {
-        color: "#10b981",
-        icon: "✓",
-        message: "Excellent Attendance!",
-        description: "Keep up the great work. Your consistent presence is helping you succeed.",
-      }
-    : {
-        color: "#ef4444",
-        icon: "⚠",
-        message: "Attendance Improvement Needed",
-        description: "Your attendance is below the required threshold. Please ensure regular attendance to avoid academic consequences.",
-      };
+  const attendanceStatus =
+    report.attendancePercentage >= 75
+      ? {
+          color: "#10b981",
+          icon: "✓",
+          message: "Excellent Attendance!",
+          description:
+            "Keep up the great work. Your consistent presence is helping you succeed.",
+        }
+      : {
+          color: "#ef4444",
+          icon: "⚠",
+          message: "Attendance Improvement Needed",
+          description:
+            "Your attendance is below the required threshold. Please ensure regular attendance to avoid academic consequences.",
+        };
 
-  const monthNames = ["January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"];
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
 
   const mailOptions = {
     from: `"Attendance System" <${process.env.SMTP_USER}>`,
@@ -163,5 +184,5 @@ export const sendEmailReport = async (report, month, year, recipientEmail) => {
   } catch (err) {
     console.error("❌ Error sending email:", err);
     throw new Error(`Failed to send email: ${err.message}`);
-  }
+  } 
 };
