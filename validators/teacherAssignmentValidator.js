@@ -5,5 +5,5 @@ export const teacherAssignmentSchema = Joi.object({
     subjectId: Joi.string().required(),
     classId: Joi.string().required(),
     campusId: Joi.string().required(),
-    action: Joi.string().valid('reassign', 'unassign').required(),
+    // action: Joi.string().valid('reassign', 'unassign').required(),
 })
