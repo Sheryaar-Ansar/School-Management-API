@@ -37,18 +37,36 @@ export const generateMonthlyAttendanceReports = async () => {
           studentName: "$student.name",
           email: "$student.email",
         },
-        totalDays: { $sum: 1 },
         presentDays: {
           $sum: { $cond: [{ $eq: ["$status", "present"] }, 1, 0] },
         },
-        absentDays: { $sum: { $cond: [{ $eq: ["$status", "absent"] }, 1, 0] } },
+        absentDays: {
+          $sum: { $cond: [{ $eq: ["$status", "absent"] }, 1, 0] },
+        },
+        leaveDays: {
+          $sum: { $cond: [{ $eq: ["$status", "leave"] }, 1, 0] },
+        },
       },
     },
     {
       $addFields: {
+        totalDays: { $add: ["$presentDays", "$absentDays"] }, // exclude leave
         attendancePercentage: {
           $round: [
-            { $multiply: [{ $divide: ["$presentDays", "$totalDays"] }, 100] },
+            {
+              $cond: [
+                { $eq: [{ $add: ["$presentDays", "$absentDays"] }, 0] },
+                0,
+                {
+                  $multiply: [
+                    {
+                      $divide: ["$presentDays", { $add: ["$presentDays", "$absentDays"] }],
+                    },
+                    100,
+                  ],
+                },
+              ],
+            },
             2,
           ],
         },
@@ -62,6 +80,7 @@ export const generateMonthlyAttendanceReports = async () => {
         totalDays: r.totalDays,
         presentDays: r.presentDays,
         absentDays: r.absentDays,
+        leaveDays: r.leaveDays,
         attendancePercentage: r.attendancePercentage,
         studentName: r._id.studentName,
       },
@@ -80,7 +99,7 @@ export const checkLowAttendanceAndNotify = async () => {
 
   const startDate = new Date(year, month, 1);
   const endDate = new Date(year, month + 1, 1);
-  
+
   const reports = await Attendance.aggregate([
     { $match: { date: { $gte: startDate, $lt: endDate } } },
     {
@@ -108,18 +127,36 @@ export const checkLowAttendanceAndNotify = async () => {
           studentName: "$student.name",
           email: "$student.email",
         },
-        totalDays: { $sum: 1 },
         presentDays: {
           $sum: { $cond: [{ $eq: ["$status", "present"] }, 1, 0] },
         },
-        absentDays: { $sum: { $cond: [{ $eq: ["$status", "absent"] }, 1, 0] } },
+        absentDays: {
+          $sum: { $cond: [{ $eq: ["$status", "absent"] }, 1, 0] },
+        },
+        leaveDays: {
+          $sum: { $cond: [{ $eq: ["$status", "leave"] }, 1, 0] },
+        },
       },
     },
     {
       $addFields: {
+        totalDays: { $add: ["$presentDays", "$absentDays"] },
         attendancePercentage: {
           $round: [
-            { $multiply: [{ $divide: ["$presentDays", "$totalDays"] }, 100] },
+            {
+              $cond: [
+                { $eq: [{ $add: ["$presentDays", "$absentDays"] }, 0] },
+                0,
+                {
+                  $multiply: [
+                    {
+                      $divide: ["$presentDays", { $add: ["$presentDays", "$absentDays"] }],
+                    },
+                    100,
+                  ],
+                },
+              ],
+            },
             2,
           ],
         },
@@ -131,8 +168,8 @@ export const checkLowAttendanceAndNotify = async () => {
     if (r.attendancePercentage < 75) {
       await sendEmailReport(
         r,
-        new Date().getMonth(),
-        new Date().getFullYear(),
+        month,
+        year,
         r._id.email
       );
     }

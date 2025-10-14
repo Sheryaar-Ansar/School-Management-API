@@ -29,16 +29,15 @@ const testGenerateSingleReport = async () => {
 
     const studentName = record.enrollment.student.name;
     // const studentEmail = record.enrollment.student.email;
-    // const studentEmail = "saadbinkhalid1895@gmail.com";
-    const studentEmail = "sheryaarlong@gmail.com";
+    const studentEmail = "saadbinkhalid1895@gmail.com";
+    // const studentEmail = "sheryaarlong@gmail.com";
 
     // Prepare a fake monthly report
     const report = {
       totalDays: 20,
-      // presentDays: 18,
-      // absentDays: 2,
       presentDays: 10,
-      absentDays: 10,
+      absentDays: 5,
+      leaveDays: 5,
       attendancePercentage: 50,
       studentName,
     };

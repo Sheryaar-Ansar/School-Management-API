@@ -4,10 +4,10 @@ const transporter = nodemailer.createTransport({
   service: "gmail",
   secure: true,
   pool: true,
-    maxConnections: 5,        // how many parallel connections
-  maxMessages: 100,         // max messages per connection before recycling
-  rateDelta: 2000,          // time window in ms for rate limit
-  rateLimit: 5,             // max 5 emails per 2 seconds
+  maxConnections: 5, // how many parallel connections
+  maxMessages: 100, // max messages per connection before recycling
+  rateDelta: 2000, // time window in ms for rate limit
+  rateLimit: 5, // max 5 emails per 2 seconds
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
@@ -95,7 +95,7 @@ export const sendEmailReport = async (report, month, year, recipientEmail) => {
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <!-- Present Days -->
-                        <td width="48%" style="background-color: #ecfdf5; border-radius: 8px; padding: 20px; vertical-align: top;">
+                        <td width=28%" style="background-color: #ecfdf5; border-radius: 8px; padding: 20px; vertical-align: top;">
                           <div style="color: #059669; font-size: 32px; font-weight: 700; margin-bottom: 5px;">
                             ${report.presentDays}
                           </div>
@@ -105,12 +105,21 @@ export const sendEmailReport = async (report, month, year, recipientEmail) => {
                         </td>
                         <td width="4%"></td>
                         <!-- Absent Days -->
-                        <td width="48%" style="background-color: #fef2f2; border-radius: 8px; padding: 20px; vertical-align: top;">
+                        <td width="28%" style="background-color: #fef2f2; border-radius: 8px; padding: 20px; vertical-align: top;">
                           <div style="color: #dc2626; font-size: 32px; font-weight: 700; margin-bottom: 5px;">
                             ${report.absentDays}
                           </div>
                           <div style="color: #b91c1c; font-size: 14px; font-weight: 500;">
                             Absent Days
+                          </div>
+                        </td>
+                        <!-- Leave Days -->
+                        <td width="28%" style="background-color: #fefce8; border-radius: 8px; padding: 20px; vertical-align: top;">
+                          <div style="color: #ca8a04; font-size: 32px; font-weight: 700; margin-bottom: 5px;">
+                            ${report.leaveDays}
+                          </div>
+                          <div style="color: #a16207; font-size: 14px; font-weight: 500;">
+                            Leave Days
                           </div>
                         </td>
                       </tr>
@@ -184,5 +193,5 @@ export const sendEmailReport = async (report, month, year, recipientEmail) => {
   } catch (err) {
     console.error("❌ Error sending email:", err);
     throw new Error(`Failed to send email: ${err.message}`);
-  } 
+  }
 };

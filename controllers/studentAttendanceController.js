@@ -151,7 +151,6 @@ export const getAllStudentsAttendance = async (req, res) => {
     if (campus) match.campus = new mongoose.Types.ObjectId(campus._id);
 
     if (status) match.status = status;
-    if (classId) match.class = new mongoose.Types.ObjectId(classId);
     if (term) match.term = term;
     if (academicSession) match.academicSession = academicSession;
     if (classId) match.class = new mongoose.Types.ObjectId(classId);

@@ -16,6 +16,7 @@ This system is built with **Node.js**, **Express**, and **MongoDB (Mongoose)** a
 | 🏫 **Campus Management** | Manage campuses and assign campus admins. |
 | 🧑‍🏫 **Teacher & Student Management** | Add, update, and delete users under specific roles and campuses. |
 | 📊 **Reports & CSV Export** | Download user data as CSV and marksheets as PDFs or zipped collections. |
+| 📈 **Dashboard Analytics** | Comprehensive analytics for campus comparison, overview stats, top performers, and dropout analysis. |
 | 📅 **Attendance Tracking** | Maintain attendance records for students (if implemented in repo). |
 | ⚙️ **Validation Layer** | Robust input validation using **Joi** for request payloads. |
 | 📚 **Logging Middleware** | Logs requests and responses for better observability and debugging. |
@@ -35,6 +36,7 @@ School-Management-API/
 │   ├── campusController.js
 │   ├── classController.js
 │   ├── attendanceController.js
+│   ├── dashboardController.js
 │   └── ...
 │
 ├── middlewares/       # Authentication, logging, error handling, validation
@@ -57,6 +59,7 @@ School-Management-API/
 │   ├── marksheetRoutes.js
 │   ├── campusRoutes.js
 │   ├── classRoutes.js
+│   ├── dashboardRoutes.js
 │   └── ...
 │
 ├── validators/        # Joi validation schemas
@@ -131,6 +134,19 @@ Handles:
 
 ---
 
+### 📊 Dashboard Controller
+Handles:
+- `getCampusComparison` — Compare performance metrics across all campuses (Super Admin only)
+- `getOverviewStats` — Comprehensive overview statistics including total counts, attendance rates, and performance metrics
+- `getTopPerformers` — Retrieve top-performing students based on scores and academic achievements
+- `getDropRatio` — Analyze student dropout rates, retention trends, and comparison with previous periods
+
+**Role-based Access:**
+- **Super Admin:** Full access to all dashboard endpoints including cross-campus comparisons
+- **Campus Admin:** Access to overview, top performers, and drop ratio for their assigned campus only
+
+---
+
 ## 🧩 Middlewares
 
 | Middleware | Purpose |
@@ -185,6 +201,7 @@ MONGODB_URI=your_mongo_connection_string
 JWT_SECRET=your_jwt_secret
 EMAIL_USER=your_gmail@example.com
 EMAIL_PASS=your_gmail_app_password
+OPENROUTER_API_KEY=your_openrouter_key
 ```
 
 ---
@@ -205,6 +222,10 @@ EMAIL_PASS=your_gmail_app_password
 | `/api/classes` | CRUD | Manage classes | ✅ |
 | `/api/campuses` | CRUD | Manage campuses | ✅ |
 | `/api/subjects` | CRUD | Manage subjects | ✅ |
+| `/api/dashboard/super-admin/getCampusComparison` | GET | Compare campus performance (Super Admin) | ✅ |
+| `/api/dashboard/getOverview` | GET | Get overview statistics (Campus Admin, Super Admin) | ✅ |
+| `/api/dashboard/getTopPerformers` | GET | Get top performers (Campus Admin, Super Admin) | ✅ |
+| `/api/dashboard/getDropRatio` | GET | Analyze dropout rates (Campus Admin, Super Admin) | ✅ |
 
 ---
 
@@ -251,7 +272,8 @@ npm run dev
 - **Joi Validation**
 - **Archiver / PDFKit**
 - **json2csv**
-- **dotenv**, **morgan**, **bcryptjs**
+- **dotenv**, **morgan**, **wintson**, **bcryptjs**
+- **Openrouter**
 
 ---
 
@@ -265,72 +287,73 @@ npm run dev
 
 ---
 
-## � Remaining / Implemented Features (details)
+## 📋 Remaining / Implemented Features (details)
 
 This project already includes many of the building blocks listed below. The sections summarize what's implemented and what you can enable or extend easily.
 
-- Node-cron (scheduled jobs)
+- **Node-cron (scheduled jobs)**
    - Purpose: automate monthly attendance report generation and weekly low-attendance checks.
    - Location: `cronJobs/cronJobs.js` calls `services/reportService.js`.
    - Notes: Cron schedule runs in server process — in production use a dedicated worker or external scheduler for reliability.
 
-- Attendance reports & low-attendance checks
+- **Attendance reports & low-attendance checks**
    - Purpose: Aggregation pipelines compute per-student attendance percentages and optionally email students when below threshold.
    - Location: `services/reportService.js`, `utils/nodemailer.js` (email templates), and a manual trigger route can be added for on-demand generation.
 
-- AI study recommendations (OpenRouter integration)
+- **AI study recommendations (OpenRouter integration)**
    - Purpose: Generate short, personalized study recommendations using the OpenRouter API (model prompts tuned in code).
    - Location: `controllers/aiController.js`, `models/Score.js` (marksheet AI remarks), and `routes/aiRoutes.js`.
    - Notes: Requires `OPENROUTER_API_KEY` in environment variables.
 
-- json2csv (CSV export)
+- **json2csv (CSV export)**
    - Purpose: Convert user and report JSON data into CSV for admins/downloads.
    - Location: Implemented in `controllers/authController.js` (CSV export example for users).
 
-- Nodemailer (email sending)
+- **Nodemailer (email sending)**
    - Purpose: Send password reset links and attendance reports via Gmail SMTP or other providers.
    - Location: `utils/nodemailer.js` and usages in `controllers/authController.js` and reporting services.
    - Notes: Requires SMTP credentials in `.env` (SMTP_USER/SMTP_PASS or EMAIL_USER/EMAIL_PASS).
 
-- Password reset flow & archiver for attachments
+- **Password reset flow & archiver for attachments**
    - Purpose: Password reset via time-limited JWT tokens. Archiver used to create ZIPs of marksheets for batch download.
    - Location: `controllers/authController.js` (forgot/reset password), `controllers/marksheetController.js` (PDF & ZIP export using `pdfkit` + `archiver`).
 
-- Bcryptjs + JWT
+- **Bcryptjs + JWT**
    - Purpose: Password hashing and session/token management.
    - Location: `models/User.js` (pre-save hashing using `bcryptjs`), `controllers/authController.js` (login/jwt issuance).
 
-- CRUD for campuses, classes, users, enrollments, assignments, exams, scores, attendance
+- **CRUD for campuses, classes, users, enrollments, assignments, exams, scores, attendance**
    - Purpose: Full management endpoints for all core entities.
    - Location: See `controllers/` and `routes/` folders — most controllers and routes are scaffolded (auth, campus, class, enrollment, exam, score, attendance). Use standard RESTful patterns and validation middlewares already in place.
 
-- Aggregation analytics & dashboard data
+- **Aggregation analytics & dashboard data**
    - Purpose: Provide aggregate metrics for dashboards (attendance rates, top/bottom students, average scores per class, pass/fail statistics).
-   - Location: `services/reportService.js` contains example aggregation queries; you can extend them into dedicated dashboard endpoints.
+   - Location: `services/reportService.js` contains example aggregation queries; you can extend them into dedicated dashboard endpoints. Dashboard-specific analytics are implemented in `controllers/dashboardController.js` with the following endpoints:
+     - `getCampusComparison` — Cross-campus performance metrics (Super Admin only)
+     - `getOverviewStats` — Comprehensive statistics including student counts, attendance rates, and performance averages
+     - `getTopPerformers` — List of highest-performing students with filtering options
+     - `getDropRatio` — Student retention and dropout analysis with trend comparisons
 
-- Pagination & filtering
+- **Pagination & filtering**
    - Purpose: Use query parameters for pagination and filtering across list endpoints (e.g., `?page=1&limit=20&role=teacher`).
    - Location: Implemented in several controllers (for example `controllers/authController.js` for users). Apply the same pattern to other list endpoints.
 
-- PDFKit for marksheets
+- **PDFKit for marksheets**
    - Purpose: Generate printable PDF marksheets per student and zip multiple marksheets for download.
    - Location: `controllers/marksheetController.js` (uses `pdfkit` and `archiver`).
 
-- OpenRouter AI integration for study recommendations
+- **OpenRouter AI integration for study recommendations**
    - Purpose: Short AI-generated study recommendations are created from student scores and included in marksheets or returned by endpoints.
    - Location: `config/openrouter.js`, `controllers/aiController.js`, and `models/Score.js` (AI remark generation during marksheet creation).
 
+---
 
+## 👨‍💻 Author
 
-
-
-
-## �👨‍💻 Author
-
-**Sheryaar Ansar**  **Saad Bin Khalid**
-🌐[https://github.com/Saad0095](https://github.com/Saad0095)
+**Sheryaar Ansar**  **Saad Bin Khalid**  
+🌐[https://github.com/Saad0095](https://github.com/Saad0095)  
 🌐 [https://github.com/Sheryaar-Ansar](https://github.com/Sheryaar-Ansar)
 
 ---
 
-> _“Empowering education management with structured simplicity.”_
+> _"Empowering education management with structured simplicity."_
