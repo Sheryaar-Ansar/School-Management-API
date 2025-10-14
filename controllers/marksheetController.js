@@ -5,6 +5,7 @@ import fs from "fs";
 import path from "path";
 import PDFDocument from "pdfkit";
 import archiver from "archiver";
+import logger from "../utils/logger.js";
 
 export const getStudentMarksheet = async (req, res) => {
     try {
@@ -124,7 +125,7 @@ export const getStudentMarksheet = async (req, res) => {
                     // Cleanup after download
                     fs.rmSync(tempDir, { recursive: true, force: true });
                     fs.unlinkSync(zipPath);
-                    if (err) console.error("Error sending zip:", err);
+                    if (err) logger.error("Error sending zip:", err);
                 });
             });
 

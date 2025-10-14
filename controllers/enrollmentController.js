@@ -3,6 +3,7 @@ import TeacherAssignment from '../models/TeacherAssignment.js'
 import Assignment from '../models/Assignment.js'
 import Campus from '../models/Campus.js'
 import User from '../models/User.js'
+import logger from '../utils/logger.js'
 import Class from '../models/Class.js'
 
 //----------------------------------------------------------------------
@@ -107,7 +108,7 @@ export const getUnassignedTeachers = async (req, res) => {
       data: unassignedTeachers,
     });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -234,7 +235,7 @@ export const getTeachers = async (req, res) => {
             data: teachers,
         })
     } catch (error) {
-        console.error(error)
+        logger.error(error)
         res.status(500).json({ error: error.message })
     }
 }

@@ -1,12 +1,13 @@
 import mongoose from "mongoose";
+import logger from "../utils/logger.js";
 
 const connectDB = async () => {
   try {
     const mongoURI = process.env.MONGO_URI || "mongodb://localhost:27017/school-management-system";
     await mongoose.connect(mongoURI);
-    console.log("MongoDB connected successfully!");
+    logger.info("MongoDB connected successfully!");
   } catch (error) {
-    console.error(error.message);
+    logger.error(error.message);
   }
 };
 
