@@ -11,7 +11,7 @@ const teacherAttendanceSchema = new Schema(
     campus: { type: Schema.Types.ObjectId, ref: "Campus" },
     checkIn: { type: Date }, //optional
     checkOut: { type: Date }, //optional
-    date: { type: Date, default: Date.now() },
+    date: { type: Date, default: Date.now },
     markedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }

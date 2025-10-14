@@ -4,6 +4,7 @@ import Exam from "./Exam.js";
 import Class from "./Class.js";
 import Marksheet from "./Marksheet.js";
 import { openrouter } from "../config/openrouter.js";
+import logger from "../utils/logger.js";
 
 const scoreSchema = new Schema(
   {
@@ -26,12 +27,12 @@ const scoreSchema = new Schema(
 scoreSchema.index({ student: 1, exam: 1 }, { unique: true });
 
 function getGrade(percentage) {
-  if (percentage >= 90) return 'A+'
-  if (percentage >= 80) return 'A'
-  if (percentage >= 70) return 'B'
-  if (percentage >= 60) return 'C'
-  if (percentage >= 50) return 'D'
-  return 'F'
+  if (percentage >= 90) return "A+";
+  if (percentage >= 80) return "A";
+  if (percentage >= 70) return "B";
+  if (percentage >= 60) return "C";
+  if (percentage >= 50) return "D";
+  return "F";
 }
 
 export async function generateMarksheet(scoreDoc) {
@@ -40,7 +41,10 @@ export async function generateMarksheet(scoreDoc) {
   if (!exam) return;
 
   const { term, academicSession } = exam;
-  const classData = await Class.findById(scoreDoc.class).populate("subjects", "_id name");
+  const classData = await Class.findById(scoreDoc.class).populate(
+    "subjects",
+    "_id name"
+  );
   if (!classData || !classData.subjects) return;
 
   const subjectIds = classData.subjects.map((sub) => sub._id.toString());
@@ -48,16 +52,23 @@ export async function generateMarksheet(scoreDoc) {
     .find({ student: scoreDoc.student, class: scoreDoc.class })
     .populate("exam", "term academicSession totalMarks")
     .populate("subject", "name")
-    .populate("student", "name"); 
+    .populate("student", "name");
 
   const termScores = allScores.filter(
-    (s) => s.exam && s.exam.term === term && s.exam.academicSession === academicSession
+    (s) =>
+      s.exam &&
+      s.exam.term === term &&
+      s.exam.academicSession === academicSession
   );
 
   const scoredSubject = termScores.map((s) => s.subject._id.toString());
-  const allSubjectsScored = subjectIds.every((id) => scoredSubject.includes(id));
+  const allSubjectsScored = subjectIds.every((id) =>
+    scoredSubject.includes(id)
+  );
   if (!allSubjectsScored) {
-    console.log("Waiting for all subjects to be scored, cannot generate marksheet");
+    logger.info(
+      "Waiting for all subjects to be scored, cannot generate marksheet"
+    );
     return;
   }
 
@@ -65,7 +76,11 @@ export async function generateMarksheet(scoreDoc) {
   for (const s of termScores) {
     const subId = s.subject._id.toString();
     if (!subjectMap.has(subId)) {
-      subjectMap.set(subId, { subject: s.subject, marksObtained: 0, totalMarks: 0 });
+      subjectMap.set(subId, {
+        subject: s.subject,
+        marksObtained: 0,
+        totalMarks: 0,
+      });
     }
     const subData = subjectMap.get(subId);
     subData.marksObtained += s.marksObtained;
@@ -77,7 +92,10 @@ export async function generateMarksheet(scoreDoc) {
     return { ...s, percentage, grade: getGrade(percentage) };
   });
 
-  const grandObtained = subjects.reduce((acc, curr) => acc + curr.marksObtained, 0);
+  const grandObtained = subjects.reduce(
+    (acc, curr) => acc + curr.marksObtained,
+    0
+  );
   const grandTotal = subjects.reduce((acc, curr) => acc + curr.totalMarks, 0);
   const grandPercentage = (grandObtained / grandTotal) * 100;
   const overallGrade = getGrade(grandPercentage);
@@ -88,8 +106,9 @@ export async function generateMarksheet(scoreDoc) {
   else if (overallGrade === "C") finalRemarks = "Good";
   else if (overallGrade === "D") finalRemarks = "Fair";
 
-  try {
-    const prompt = `
+  if (Math.random() < 0.05) {
+    try {
+      const prompt = `
 You are a teacher writing brief report card feedback.
 Analyze the student's performance based on subjects and grades.
 
@@ -107,28 +126,30 @@ Write a short, 1–2 sentence remark focusing on strengths and improvement areas
 Keep it encouraging and personalized.
 `;
 
-  const aiResponse = await openrouter.post("/chat/completions", {
-model: "meta-llama/llama-3.3-70b-instruct:free",
-    messages: [
-      {
-        role: "system",
-        content: "You are a kind, concise, and experienced school teacher providing feedback.",
-      },
-      { role: "user", content: prompt },
-    ],
-    temperature: 0.6,
-    max_tokens: 30,
-  });
+      const aiResponse = await openrouter.post("/chat/completions", {
+        model: "meta-llama/llama-3.3-70b-instruct:free",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a kind, concise, and experienced school teacher providing feedback.",
+          },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.6,
+        max_tokens: 30,
+      });
 
-    const aiRemark =
-      aiResponse.data?.choices?.[0]?.message?.content?.trim() || finalRemarks;
-console.log(aiResponse.data?.choices?.[0]?.message?.content?.trim());
+      const aiRemark =
+        aiResponse.data?.choices?.[0]?.message?.content?.trim() || finalRemarks;
+      logger.info(aiResponse.data?.choices?.[0]?.message?.content?.trim());
 
-    finalRemarks = aiRemark;
-  } catch (error) {
-    console.error("AI remark generation failed:", error.message);
+      finalRemarks = aiRemark;
+      logger.info(`Remark: ${aiRemark}`);
+    } catch (error) {
+      logger.error(`AI remark generation failed: ${error.message}`);
+    }
   }
-
   await Marksheet.findOneAndUpdate(
     { student: scoreDoc.student, class: scoreDoc.class, term, academicSession },
     {
@@ -147,14 +168,17 @@ console.log(aiResponse.data?.choices?.[0]?.message?.content?.trim());
     { upsert: true, new: true }
   );
 
-  console.log("✅ Marksheet generated with AI remarks for:", scoreDoc.student);
+  const studentName =
+    scoreDoc.student?.name ||
+    (termScores[0]?.student?.name ?? scoreDoc.student?.toString());
+  logger.info(`✅ Marksheet generated with remarks for: ${studentName}`);
 }
 
-scoreSchema.post('save', async function(doc){
-  await generateMarksheet(doc)
-})
-scoreSchema.post('findOneAndUpdate', async function (doc){
-  await generateMarksheet(doc)
-})
+scoreSchema.post("save", async function (doc) {
+  await generateMarksheet(doc);
+});
+scoreSchema.post("findOneAndUpdate", async function (doc) {
+  await generateMarksheet(doc);
+});
 
 export default model("Score", scoreSchema);

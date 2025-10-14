@@ -46,20 +46,19 @@ export const getOverviewStats = async (req, res) => {
 
 export const getTopPerformers = async (req, res) => {
   try {
-    const { campusId, academicSession, term } = req.query;
-    let filter = {};
+    const { campusId, classId, academicSession, term } = req.query;
+    let matchStage = {};
 
     if (req.user.role === "campus-admin") {
       const campus = await Campus.findOne({ campusAdmin: req.user._id });
       if (!campus) return res.status(404).json({ message: "Campus not found" });
-      filter.campus = campus._id;
-    } else if (campusId) {
-      if (!mongoose.Types.ObjectId.isValid(campusId))
-        return res.status(400).json({ message: "Invalid campusId" });
-      filter.campus = new mongoose.Types.ObjectId(campusId);
-    }
+      matchStage.campus = campus._id;
 
-    const matchStage = { ...filter };
+      if (classId) matchStage.class = new mongoose.Types.ObjectId(classId);
+    } else {
+      if (campusId) matchStage.campus = new mongoose.Types.ObjectId(campusId);
+      if (classId) matchStage.class = new mongoose.Types.ObjectId(classId);
+    }
 
     const topPerformers = await Score.aggregate([
       { $match: matchStage },
@@ -103,12 +102,24 @@ export const getTopPerformers = async (req, res) => {
       },
       { $unwind: "$campus" },
       {
+        $lookup: {
+          from: "classes",
+          localField: "class",
+          foreignField: "_id",
+          as: "class",
+        },
+      },
+      { $unwind: "$class" },
+      {
         $group: {
           _id: {
             campusId: "$campus._id",
             campusName: "$campus.name",
             studentId: "$student._id",
             studentName: "$student.name",
+            classId: "$class._id",
+            classGrade: "$class.grade",
+            classSection: "$class.section",
           },
           totalMarks: { $sum: "$marksObtained" },
           avgMarks: { $avg: "$marksObtained" },
@@ -135,6 +146,9 @@ export const getTopPerformers = async (req, res) => {
               name: "$_id.studentName",
               avgMarks: "$avgMarks",
               avgPercentage: "$avgPercentage",
+              classId: "$_id.classId",
+              classGrade: "$_id.classGrade",
+              classSection: "$_id.classSection",
             },
           },
         },
@@ -149,9 +163,10 @@ export const getTopPerformers = async (req, res) => {
       },
     ]);
 
+    let finalData = topPerformers;
     if (req.user.role === "super-admin" && !campusId) {
       const allCampuses = await Campus.find({}, "_id name");
-      const resultWithMissing = allCampuses.map((c) => {
+      finalData = allCampuses.map((c) => {
         const found = topPerformers.find(
           (p) => p.campusId.toString() === c._id.toString()
         );
@@ -163,22 +178,22 @@ export const getTopPerformers = async (req, res) => {
           }
         );
       });
-      return res.status(200).json({
-        success: true,
-        filtersApplied: {
-          academicSession: academicSession || "All",
-          term: term || "All",
-        },
-        data: resultWithMissing,
-      });
     }
+
+    const firstCampus = finalData[0];
+    const firstStudent = firstCampus?.topStudents?.[0];
+    const classLabel =
+      firstStudent && firstStudent.classGrade && firstStudent.classSection
+        ? `${firstStudent.classGrade}${firstStudent.classSection}`
+        : "All";
 
     res.status(200).json({
       filtersApplied: {
         academicSession: academicSession || "All",
         term: term || "All",
+        class: classLabel,
       },
-      data: topPerformers,
+      data: finalData,
     });
   } catch (error) {
     console.error("Error in getting Top Performers:", error);
@@ -222,7 +237,6 @@ export const getDropRatio = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 export const getCampusComparison = async (req, res) => {
   try {
