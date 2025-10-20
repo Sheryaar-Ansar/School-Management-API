@@ -1,79 +1,128 @@
-# 🏫 School Management API
+# 🏫 School Management System API
 
-A complete backend API for managing a school ecosystem — including students, teachers, classes, campuses, attendance, marksheets, and user roles (Super Admin, Campus Admin, Teacher, Student).  
-This system is built with **Node.js**, **Express**, and **MongoDB (Mongoose)** and supports **role-based authentication**, **email-based password reset**, **PDF/ZIP exports**, and **CSV downloads**.
+A modern, scalable backend API built with Node.js for managing educational institutions. Features multi-campus support, role-based authentication, complete academic workflow management, and comprehensive reporting capabilities.
 
----
+![GitHub last commit](https://img.shields.io/github/last-commit/Sheryaar-Ansar/School-Management-API)
+![GitHub issues](https://img.shields.io/github/issues/Sheryaar-Ansar/School-Management-API)
+![GitHub license](https://img.shields.io/github/license/Sheryaar-Ansar/School-Management-API)
 
-## 🚀 Features
+## 🎯 Key Features
 
-| Feature | Description |
-|----------|-------------|
-| 🧑‍💼 **Role-based Access Control** | Supports multiple user roles — `super-admin`, `campus-admin`, `teacher`, `student` with different permissions. |
-| 🔐 **JWT Authentication** | JSON Web Tokens for secure login and session management. |
-| 💌 **Password Reset via Gmail** | Forgot/reset password feature using Gmail with Nodemailer and secure reset tokens. |
-| 🧾 **Marksheet Management** | Create, view, and export student marksheets; supports PDF generation and ZIP download for multiple students. |
-| 🏫 **Campus Management** | Manage campuses and assign campus admins. |
-| 🧑‍🏫 **Teacher & Student Management** | Add, update, and delete users under specific roles and campuses. |
-| 📊 **Reports & CSV Export** | Download user data as CSV and marksheets as PDFs or zipped collections. |
-| 📅 **Attendance Tracking** | Maintain attendance records for students (if implemented in repo). |
-| ⚙️ **Validation Layer** | Robust input validation using **Joi** for request payloads. |
-| 📚 **Logging Middleware** | Logs requests and responses for better observability and debugging. |
-| 🛡️ **Error Handling** | Centralized error-handling middleware with meaningful HTTP responses. |
+- 👥 **Multi-Role System**: Super Admin, Campus Admin, Teacher, Student access levels
+- 🏫 **Multi-Campus Support**: Manage multiple school branches efficiently
+- 📚 **Academic Management**: Classes, subjects, exams, and marksheets
+- ✅ **Attendance Tracking**: For both students and teachers
+- 📊 **Advanced Reporting**: PDF marksheets, CSV exports, attendance reports
+- 🤖 **AI Integration**: Smart study recommendations via OpenRouter API
+- ⚡ **Real-time Updates**: Automated notifications and reports
+- 🔒 **Secure Authentication**: JWT-based with role-specific access
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js (v14 or higher)
+- MongoDB (v4.4 or higher)
+- npm or yarn
+- Gmail account (for email services)
+
+### Installation
+
+1. Clone the repository
+```bash
+git clone https://github.com/Sheryaar-Ansar/School-Management-API.git
+cd School-Management-API
+```
+
+2. Install dependencies
+```bash
+npm install
+```
+
+3. Configure environment variables
+Create a `.env` file in the root directory:
+```env
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/school-management
+JWT_SECRET=your_jwt_secret_key
+JWT_EXPIRE=30d
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASS=your-app-specific-password
+OPENROUTER_API_KEY=your-openrouter-api-key  # For AI features
+```
+
+4. Start the server
+```bash
+# Development mode
+npm run dev
+
+# Production mode
+npm start
+```
 
 ---
 
 ## 📁 Project Structure
 
 ```
-School-Management-API/
-│
-├── config/            # Configuration files (database, environment)
-├── controllers/       # All controller logic for each module
+school-management-api/
+├── config/               # Configuration files
+│   └── openrouter.js    # AI integration config
+├── controllers/         # Route controllers
+│   ├── aiController.js
 │   ├── authController.js
-│   ├── marksheetController.js
 │   ├── campusController.js
 │   ├── classController.js
-│   ├── attendanceController.js
-│   └── ...
-│
-├── middlewares/       # Authentication, logging, error handling, validation
-│   ├── authMiddleware.js
-│   ├── errorMiddleware.js
-│   ├── loggingMiddleware.js
-│   └── validationMiddleware.js
-│
-├── models/            # Mongoose schemas and models
-│   ├── User.js
-│   ├── Marksheet.js
-│   ├── Class.js
+│   ├── enrollmentController.js
+│   ├── examController.js
+│   ├── marksheetController.js
+│   ├── scoreController.js
+│   ├── studentAttendanceController.js
+│   └── teacherAttendanceController.js
+├── models/             # Database schemas
+│   ├── Assignment.js
 │   ├── Campus.js
+│   ├── Class.js
+│   ├── Exam.js
+│   ├── Marksheet.js
+│   ├── Score.js
+│   ├── StudentAttendance.js
+│   ├── StudentEnrollment.js
 │   ├── Subject.js
-│   └── Attendance.js
-│
-├── routes/            # Express route definitions
+│   ├── TeacherAssignment.js
+│   ├── TeacherAttendance.js
+│   └── User.js
+├── routes/             # API routes
+│   ├── aiRoutes.js
 │   ├── authRoutes.js
-│   ├── userRoutes.js
-│   ├── marksheetRoutes.js
 │   ├── campusRoutes.js
 │   ├── classRoutes.js
-│   └── ...
-│
-├── validators/        # Joi validation schemas
+│   ├── enrollmentRoutes.js
+│   ├── examRoutes.js
+│   ├── marksheetRoute.js
+│   ├── scoreRoutes.js
+│   └── teacherAttendanceRoutes.js
+├── middlewares/        # Custom middlewares
+│   ├── authMiddleware.js
+│   ├── errorHandler.js
+│   └── validate.js
+├── validators/         # Request validation
 │   ├── authValidator.js
-│   ├── marksheetValidator.js
-│   ├── userValidator.js
-│   └── ...
-│
-├── services/          # Reusable services (email, PDF generation, etc.)
-│   ├── emailService.js
-│   ├── pdfService.js
-│   └── ...
-│
-├── utils/             # Helper utilities and constants
-├── uploads/           # File uploads (if enabled)
-├── index.js           # Entry point
-└── package.json
+│   ├── campusValidator.js
+│   ├── classValidator.js
+│   ├── examValidator.js
+│   └── scoreValidator.js
+├── utils/             # Helper utilities
+│   ├── logger.js
+│   └── nodemailer.js
+├── cronJobs/          # Automated tasks
+│   └── cronJobs.js
+├── services/          # Business services
+│   └── reportService.js
+├── uploads/           # File storage
+├── index.js          # Application entry point
+└── package.json     # Project dependencies
 ```
 
 ---
@@ -189,22 +238,85 @@ EMAIL_PASS=your_gmail_app_password
 
 ---
 
-## 🧪 API Routes Summary
+## 🛣️ API Routes
 
-| Route | Method | Description | Protected |
-|-------|--------|--------------|------------|
-| `/api/auth/register` | POST | Register a user | ❌ |
-| `/api/auth/login` | POST | Login user and return JWT | ❌ |
-| `/api/auth/forgot-password` | POST | Send password reset email | ❌ |
-| `/api/auth/reset-password/:token` | POST | Reset password | ❌ |
-| `/api/users` | GET | Get all users (with filters, pagination, CSV export) | ✅ |
-| `/api/users/:id` | GET | Get single user by ID | ✅ |
-| `/api/users/:id` | PUT | Update user | ✅ |
-| `/api/users/:id` | DELETE | Delete user | ✅ |
-| `/api/marksheets` | GET | Fetch marksheets (supports `downloadZIP=true`) | ✅ |
-| `/api/classes` | CRUD | Manage classes | ✅ |
-| `/api/campuses` | CRUD | Manage campuses | ✅ |
-| `/api/subjects` | CRUD | Manage subjects | ✅ |
+### Authentication
+```
+POST   /api/auth/register          # Register new user
+POST   /api/auth/login             # Authenticate user
+POST   /api/auth/forgot-password   # Request password reset
+POST   /api/auth/reset-password    # Reset password
+GET    /api/auth/me                # Get current user
+```
+
+### Campus Management
+```
+POST   /api/campus                 # Create new campus
+GET    /api/campus                 # List all campuses
+GET    /api/campus/:id             # Get campus details
+PUT    /api/campus/:id             # Update campus
+DELETE /api/campus/:id             # Remove campus
+```
+
+### Academic Management
+```
+POST   /api/class                  # Create class
+GET    /api/class                  # List classes
+PUT    /api/class/:id             # Update class
+DELETE /api/class/:id             # Delete class
+
+POST   /api/subject               # Add subject
+GET    /api/subject              # List subjects
+PUT    /api/subject/:id          # Update subject
+DELETE /api/subject/:id          # Remove subject
+```
+
+### Enrollment & Assignments
+```
+POST   /api/enrollment            # Enroll student
+GET    /api/enrollment           # List enrollments
+PUT    /api/enrollment/:id       # Update enrollment
+DELETE /api/enrollment/:id       # Cancel enrollment
+
+POST   /api/assignment           # Create assignment
+GET    /api/assignment          # List assignments
+PUT    /api/assignment/:id      # Update assignment
+DELETE /api/assignment/:id      # Remove assignment
+```
+
+### Attendance Management
+```
+POST   /api/student-attendance    # Mark student attendance
+GET    /api/student-attendance   # Get student attendance
+POST   /api/teacher-attendance   # Mark teacher attendance
+GET    /api/teacher-attendance  # Get teacher attendance
+```
+
+### Examination System
+```
+POST   /api/exam                 # Schedule exam
+GET    /api/exam                # List exams
+PUT    /api/exam/:id            # Update exam
+DELETE /api/exam/:id            # Cancel exam
+
+POST   /api/score               # Record scores
+GET    /api/score              # Get scores
+PUT    /api/score/:id          # Update scores
+
+GET    /api/marksheet          # Generate marksheet
+GET    /api/marksheet/download # Download marksheet (PDF/ZIP)
+```
+
+### AI Features
+```
+POST   /api/ai/recommend        # Get AI study recommendations
+POST   /api/ai/analyze         # Analyze performance
+```
+
+### Dashboard & Reports
+```
+GET    /api/dashboard/stats    # Get dashboard statistics
+GET    /api/dashboard/reports  # Generate custom reports
 
 ---
 
@@ -242,30 +354,58 @@ npm run dev
 
 ---
 
-## 🧱 Technologies Used
+## 🛠️ Core Technologies
 
-- **Node.js** + **Express.js**
-- **MongoDB** + **Mongoose**
-- **JWT Authentication**
-- **Nodemailer (Gmail SMTP)**
-- **Joi Validation**
-- **Archiver / PDFKit**
-- **json2csv**
-- **dotenv**, **morgan**, **bcryptjs**
+### Backend Framework
+- **Node.js** - Runtime environment
+- **Express.js** - Web application framework
+- **MongoDB** - Database
+- **Mongoose** - ODM for MongoDB
 
----
+### Security & Authentication
+- **JWT** - Token-based authentication
+- **bcryptjs** - Password hashing
+- **Joi** - Input validation
 
-## 🧭 Future Enhancements
+### Features & Utilities
+- **Nodemailer** - Email service integration
+- **node-cron** - Scheduled tasks
+- **OpenRouter API** - AI integration
+- **PDFKit** - PDF generation
+- **Archiver** - ZIP file creation
+- **json2csv** - Data exports
 
-- Integration with frontend dashboard  
-- Graph-based analytics and attendance visualization  
-- Role-based audit logs and activity tracking  
-- Multi-language email templates  
-- AWS S3 file uploads for reports  
+### Development Tools
+- **dotenv** - Environment management
+- **morgan** - HTTP request logging
+- **winston** - Application logging
 
----
+## 🔄 Current Development Status
 
-## � Remaining / Implemented Features (details)
+### ✅ Implemented Features
+- Complete authentication system with JWT
+- Multi-campus management
+- Student & teacher attendance tracking
+- Examination and marksheet system
+- AI-powered study recommendations
+- Automated report generation
+- Email notifications
+- PDF/CSV exports
+
+### 🚧 In Development
+- Real-time notifications
+- Advanced analytics dashboard
+- Parent portal access
+- Mobile app API endpoints
+- Batch processing improvements
+
+### 📋 Future Roadmap
+1. GraphQL API support
+2. WebSocket integration
+3. Payment gateway integration
+4. Learning management system
+5. Resource scheduling system
+6. Advanced AI features
 
 This project already includes many of the building blocks listed below. The sections summarize what's implemented and what you can enable or extend easily.
 
@@ -320,17 +460,16 @@ This project already includes many of the building blocks listed below. The sect
    - Purpose: Short AI-generated study recommendations are created from student scores and included in marksheets or returned by endpoints.
    - Location: `config/openrouter.js`, `controllers/aiController.js`, and `models/Score.js` (AI remark generation during marksheet creation).
 
+## � Contributors
 
+### Lead Developers
+- **Sheryaar Ansar** - [GitHub](https://github.com/Sheryaar-Ansar)
+- **Saad Bin Khalid** - [GitHub](https://github.com/Saad0095)
 
+## 📄 License
 
-
-
-## �👨‍💻 Author
-
-**Sheryaar Ansar**  **Saad Bin Khalid**
-🌐[https://github.com/Saad0095](https://github.com/Saad0095)
-🌐 [https://github.com/Sheryaar-Ansar](https://github.com/Sheryaar-Ansar)
+This project is licensed under the MIT License.
 
 ---
 
-> _“Empowering education management with structured simplicity.”_
+> "Empowering education through technology, one school at a time."
