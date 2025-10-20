@@ -6,6 +6,14 @@ A modern, scalable backend API built with Node.js for managing educational insti
 ![GitHub issues](https://img.shields.io/github/issues/Sheryaar-Ansar/School-Management-API)
 ![GitHub license](https://img.shields.io/github/license/Sheryaar-Ansar/School-Management-API)
 
+## 📋 Project Overview
+
+This School Management System is a comprehensive Node.js/Express backend solution designed for modern educational institutions. At its core, it implements a multi-tenant architecture supporting multiple campuses, each with its own administrators, teachers, and students. The system handles the complete academic lifecycle, from student enrollment and class management to examination scheduling and result processing.
+
+The application is built with a strong emphasis on security, featuring JWT-based authentication with role-specific access control (Super Admin, Campus Admin, Teacher, Student). It includes sophisticated modules for attendance tracking (both students and teachers), comprehensive examination management, and automated marksheet generation with PDF export capabilities. The system also leverages AI through OpenRouter integration for generating personalized study recommendations based on student performance.
+
+Key technical features include automated report generation through cron jobs, email notifications via Nodemailer (Gmail SMTP), and extensive data export options in both PDF and CSV formats. The system employs MongoDB with Mongoose ODM for flexible data modeling, implements thorough request validation using Joi, and includes comprehensive error handling and logging mechanisms. Notable features include bulk operations for marksheet generation with ZIP support, configurable dashboard analytics, and a well-structured API supporting future scaling to mobile applications and frontend integrations.
+
 ## 🎯 Key Features
 
 - 👥 **Multi-Role System**: Super Admin, Campus Admin, Teacher, Student access levels
