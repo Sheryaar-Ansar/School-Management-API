@@ -15,12 +15,21 @@ import marksheetRoutes from './routes/marksheetRoute.js'
 import dashboardRoutes from './routes/dashboardRoutes.js'
 import aiRoutes from './routes/aiRoutes.js'
 import morgan from "morgan";
+import cors from "cors";
 import logger from "./utils/logger.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 
 const app = express();
 
 connectDB();
+
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    credentials: true, 
+  })
+);
+
 app.use(express.json());
 
 app.use(
