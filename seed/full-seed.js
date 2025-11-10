@@ -180,17 +180,22 @@ const seed = async () => {
       // simple Fisher-Yates shuffle
       for (let i = campusTeachers.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [campusTeachers[i], campusTeachers[j]] = [campusTeachers[j], campusTeachers[i]];
+        [campusTeachers[i], campusTeachers[j]] = [
+          campusTeachers[j],
+          campusTeachers[i],
+        ];
       }
 
       const grades = [6, 7, 8];
-      const sections = ['A', 'B'];
+      const sections = ["A", "B"];
       let teacherIndex = 0;
       for (const grade of grades) {
         for (const section of sections) {
           // assign each teacher only once as class teacher
           if (teacherIndex >= campusTeachers.length) {
-            throw new Error(`Not enough teachers to assign unique class teachers for campus ${campus.name}`);
+            throw new Error(
+              `Not enough teachers to assign unique class teachers for campus ${campus.name}`
+            );
           }
           const classTeacher = campusTeachers[teacherIndex];
           teacherIndex++;
@@ -311,7 +316,7 @@ const seed = async () => {
 
     // Enroll test students in a class
     const testClass = classes[0]; // Enroll in first class
-    
+
     const testEnrollment1 = await StudentEnrollment.create({
       student: testStudent1._id,
       campus: testClass.campus,
@@ -387,7 +392,7 @@ const seed = async () => {
 
     for (const campus of campuses) {
       const campusTeachers = teachers[campus.code];
-      
+
       if (!campusTeachers || campusTeachers.length === 0) {
         console.warn(`⚠️ No teachers found for campus ${campus.name}`);
         continue;
@@ -423,11 +428,15 @@ const seed = async () => {
           teacherAttendanceCount++;
         }
       }
-      
-      console.log(`✅ Created attendance for ${campusTeachers.length} teachers in ${campus.name}`);
+
+      console.log(
+        `✅ Created attendance for ${campusTeachers.length} teachers in ${campus.name}`
+      );
     }
 
-    console.log(`✅ Total teacher attendance records: ${teacherAttendanceCount}`);
+    console.log(
+      `✅ Total teacher attendance records: ${teacherAttendanceCount}`
+    );
 
     // 12) Student Attendance
     console.log("⏳ Creating student attendance...");
@@ -442,13 +451,17 @@ const seed = async () => {
           status: ["present", "absent", "leave"][randomInt(0, 2)],
           class: enrollment.class,
           campus: enrollment.campus,
+          term: "FirstTerm",
+          academicSession: "2025-2026",
           date,
           markedBy: superAdmin._id,
         });
         studentAttendanceCount++;
       }
     }
-    console.log(`✅ Total student attendance records: ${studentAttendanceCount}`);
+    console.log(
+      `✅ Total student attendance records: ${studentAttendanceCount}`
+    );
 
     // 13) Generate marksheets (OPTIMIZED)
     console.log("⏳ Generating marksheets...");
@@ -465,7 +478,9 @@ const seed = async () => {
       uniqueCombinations.set(key, score);
     }
 
-    console.log(`📊 Found ${uniqueCombinations.size} unique marksheets to generate`);
+    console.log(
+      `📊 Found ${uniqueCombinations.size} unique marksheets to generate`
+    );
 
     // Generate marksheets in batches (skip AI for speed)
     const batchSize = 20;
@@ -473,8 +488,12 @@ const seed = async () => {
 
     for (let i = 0; i < uniqueScores.length; i += batchSize) {
       const batch = uniqueScores.slice(i, i + batchSize);
-      await Promise.all(batch.map(score => generateMarksheet(score, true))); // true = skip AI
-      console.log(`✅ Generated ${Math.min(i + batchSize, uniqueScores.length)}/${uniqueScores.length} marksheets`);
+      await Promise.all(batch.map((score) => generateMarksheet(score, true))); // true = skip AI
+      console.log(
+        `✅ Generated ${Math.min(i + batchSize, uniqueScores.length)}/${
+          uniqueScores.length
+        } marksheets`
+      );
     }
 
     const allTeachers = Object.values(teachers).flat();
@@ -491,7 +510,7 @@ const seed = async () => {
     console.log(`  • Teacher Attendance: ${teacherAttendanceCount}`);
     console.log(`  • Student Attendance: ${studentAttendanceCount}`);
     console.log(`  • Marksheets: ${uniqueCombinations.size}`);
-    
+
     process.exit(0);
   } catch (err) {
     console.error("❌ Seeding failed:", err);

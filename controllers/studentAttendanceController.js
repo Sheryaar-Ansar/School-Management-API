@@ -4,15 +4,22 @@ import StudentAttendance from "../models/StudentAttendance.js";
 import StudentEnrollment from "../models/StudentEnrollment.js";
 import TeacherAssignment from "../models/TeacherAssignment.js";
 import Class from "../models/Class.js";
+import logger from "../utils/logger.js";
 
 export const markBulkStudentAttendance = async (req, res) => {
   try {
-    const { classId, records } = req.body; // [{ rollNumber, status }, ...]
+    const { classId, records, term, academicSession } = req.body; // [{ rollNumber, status }, ...]
 
     if (!classId || !records?.length) {
       return res
         .status(400)
         .json({ message: "Class ID and records are required" });
+    }
+
+    if (!term || !academicSession) {
+      return res
+        .status(400)
+        .json({ message: "Term and academic year are required" });
     }
 
     let classRec;
@@ -94,6 +101,8 @@ export const markBulkStudentAttendance = async (req, res) => {
         class: classRec._id,
         campus: classRec.campus,
         markedBy: req.user._id,
+        term,
+        academicSession,
       });
 
       attendanceResults.push({
@@ -104,11 +113,16 @@ export const markBulkStudentAttendance = async (req, res) => {
       });
     }
 
+    logger.info(
+      `Bulk attendance marked by ${req.user._id} for class ${classId}`
+    );
+
     res.status(201).json({
       message: "Bulk student attendance processed",
       results: attendanceResults,
     });
   } catch (err) {
+    logger.error(`Error marking bulk attendance: ${err.message}`);
     res.status(500).json({
       message: "Error marking bulk attendance",
       error: err.message,
@@ -118,7 +132,16 @@ export const markBulkStudentAttendance = async (req, res) => {
 
 export const getAllStudentsAttendance = async (req, res) => {
   try {
-    const { status, from, to, classId, pageNumber, pageSize } = req.query;
+    const {
+      status,
+      from,
+      to,
+      classId,
+      term,
+      academicSession,
+      pageNumber,
+      pageSize,
+    } = req.query;
     const page = parseInt(pageNumber) || 1;
     const limit = parseInt(pageSize) || 10;
 
@@ -128,6 +151,8 @@ export const getAllStudentsAttendance = async (req, res) => {
     if (campus) match.campus = new mongoose.Types.ObjectId(campus._id);
 
     if (status) match.status = status;
+    if (term) match.term = term;
+    if (academicSession) match.academicSession = academicSession;
     if (classId) match.class = new mongoose.Types.ObjectId(classId);
 
     if (from && to) {
@@ -137,6 +162,10 @@ export const getAllStudentsAttendance = async (req, res) => {
       toDate.setHours(23, 59, 59, 999);
       match.date = { $gte: fromDate, $lte: toDate };
     }
+
+    logger.info(
+      `Fetching student attendance with filters: ${JSON.stringify(match)}`
+    );
 
     const result = await StudentAttendance.aggregate([
       { $match: match },
@@ -175,6 +204,8 @@ export const getAllStudentsAttendance = async (req, res) => {
                 _id: 1,
                 date: 1,
                 status: 1,
+                term: 1,
+                academicSession: 1,
                 class: 1,
                 campus: 1,
                 "classDetails.grade": 1,
@@ -232,7 +263,8 @@ export const getAllStudentsAttendance = async (req, res) => {
 
 export const getStudentAttendance = async (req, res) => {
   try {
-    const { from, to, status, pageNumber, pageSize } = req.query;
+    const { from, to, status, term, academicSession, pageNumber, pageSize } =
+      req.query;
     const page = parseInt(pageNumber) || 1;
     const limit = parseInt(pageSize) || 10;
     const studentId = req.params.studentId;
@@ -242,6 +274,9 @@ export const getStudentAttendance = async (req, res) => {
     };
 
     if (status) match.status = status;
+    if (term) match.term = term;
+    if (academicSession) match.academicSession = academicSession;
+
     if (from && to) {
       const fromDate = new Date(from);
       fromDate.setHours(0, 0, 0, 0);

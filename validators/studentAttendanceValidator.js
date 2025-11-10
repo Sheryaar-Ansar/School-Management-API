@@ -5,5 +5,7 @@ export const studentAssignmentSchema = Joi.object({
     records: Joi.array().items(Joi.object({
         rollNumber: Joi.string().required(),
         status: Joi.string().valid('present', 'absent', 'leave').required()
-    }))
+    })),
+    term: Joi.string().required(),
+    academicSession: Joi.string().required(),
 })

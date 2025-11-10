@@ -35,10 +35,9 @@ const testGenerateSingleReport = async () => {
     // Prepare a fake monthly report
     const report = {
       totalDays: 20,
-      // presentDays: 18,
-      // absentDays: 2,
       presentDays: 10,
-      absentDays: 10,
+      absentDays: 5,
+      leaveDays: 5,
       attendancePercentage: 50,
       studentName,
     };
