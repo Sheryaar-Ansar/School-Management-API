@@ -65,46 +65,115 @@ export const createExam = async (req, res) => {
   }
 };
 
+// export const getAllExams = async (req, res) => {
+//   try {
+//     const { role, _id: userId } = req.user;
+//     const { campusId, page = 1, limit = 5, term, academicSession } = req.query;
+//     let filter = {};
+
+//     if (role === "campus-admin") {
+//       const campusData = await Campus.findOne({ campusAdmin: userId });
+//       if (!campusData) {
+//         return res
+//           .status(404)
+//           .json({ message: "Campus not found for this admin" });
+//       }
+//       filter.campus = campusData._id;
+//     } else if (role === "teacher") {
+//       const filterOrConditions = [];
+
+//       // Case 1: Class Teacher (main class)
+//       const mainClass = await Class.findOne({
+//         classTeacher: userId,
+//         isActive: true,
+//       });
+
+//       if (mainClass) {
+//         filterOrConditions.push({ class: mainClass._id });
+//       }
+
+//       // Case 2: Assigned Teacher (teaches other classes/subjects)
+//       const teacherAssign = await TeacherAssignment.findOne({
+//         teacher: userId,
+//         isActive: true,
+//       }).populate({
+//         path: "assignments",
+//         match: { isActive: true },
+//         select: "campus class subject",
+//       });
+
+//       if (teacherAssign && teacherAssign.assignments.length > 0) {
+//         teacherAssign.assignments.forEach((a) => {
+//           filterOrConditions.push({
+//             campus: a.campus.toString(),
+//             class: a.class.toString(),
+//             subject: a.subject.toString(),
+//           });
+//         });
+//       }
+
+//       if (filterOrConditions.length === 0) {
+//         return res
+//           .status(403)
+//           .json({ message: "You don't have any active class or assignments" });
+//       }
+
+//       filter.$or = filterOrConditions;
+//     } else if (role === "super-admin") {
+//       if (campusId) {
+//         filter.campus = campusId;
+//       }
+//     }
+//     if (term) {
+//       filter.term = term;
+//     }
+//     if (academicSession) {
+//       filter.academicSession = academicSession;
+//     }
+//     const skip = parseInt(page - 1) * parseInt(limit);
+//     const exams = await Exam.find(filter)
+//       .populate("class", "grade section")
+//       .populate("subject", "name")
+//       .populate("campus", "name")
+//       .skip(skip)
+//       .limit(parseInt(limit))
+//       .sort({ createdAt: -1 });
+//     const totalExams = await Exam.countDocuments(filter);
+//     res.json({
+//       totalExams,
+//       page: parseInt(page),
+//       limit: parseInt(limit),
+//       exams,
+//     });
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+
+// GET /exams
 export const getAllExams = async (req, res) => {
   try {
     const { role, _id: userId } = req.user;
     const { campusId, page = 1, limit = 5, term, academicSession } = req.query;
     let filter = {};
 
+    // Role-based filtering
     if (role === "campus-admin") {
       const campusData = await Campus.findOne({ campusAdmin: userId });
-      if (!campusData) {
-        return res
-          .status(404)
-          .json({ message: "Campus not found for this admin" });
-      }
+      if (!campusData) return res.status(404).json({ message: "Campus not found" });
       filter.campus = campusData._id;
     } else if (role === "teacher") {
-      const filterOrConditions = [];
+      const filterOr = [];
+      const mainClass = await Class.findOne({ classTeacher: userId, isActive: true });
+      if (mainClass) filterOr.push({ class: mainClass._id });
 
-      // Case 1: Class Teacher (main class)
-      const mainClass = await Class.findOne({
-        classTeacher: userId,
-        isActive: true,
-      });
+      const teacherAssign = await TeacherAssignment.findOne({ teacher: userId, isActive: true })
+        .populate({ path: "assignments", match: { isActive: true }, select: "campus class subject" });
 
-      if (mainClass) {
-        filterOrConditions.push({ class: mainClass._id });
-      }
-
-      // Case 2: Assigned Teacher (teaches other classes/subjects)
-      const teacherAssign = await TeacherAssignment.findOne({
-        teacher: userId,
-        isActive: true,
-      }).populate({
-        path: "assignments",
-        match: { isActive: true },
-        select: "campus class subject",
-      });
-
-      if (teacherAssign && teacherAssign.assignments.length > 0) {
-        teacherAssign.assignments.forEach((a) => {
-          filterOrConditions.push({
+      if (teacherAssign?.assignments?.length) {
+        teacherAssign.assignments.forEach(a => {
+          filterOr.push({
             campus: a.campus.toString(),
             class: a.class.toString(),
             subject: a.subject.toString(),
@@ -112,43 +181,75 @@ export const getAllExams = async (req, res) => {
         });
       }
 
-      if (filterOrConditions.length === 0) {
-        return res
-          .status(403)
-          .json({ message: "You don't have any active class or assignments" });
-      }
+      if (!filterOr.length) return res.status(403).json({ message: "No active classes or assignments" });
+      filter.$or = filterOr;
+    } else if (role === "super-admin" && campusId) {
+      filter.campus = campusId;
+    }
 
-      filter.$or = filterOrConditions;
-    } else if (role === "super-admin") {
-      if (campusId) {
-        filter.campus = campusId;
-      }
-    }
-    if (term) {
-      filter.term = term;
-    }
-    if (academicSession) {
-      filter.academicSession = academicSession;
-    }
-    const skip = parseInt(page - 1) * parseInt(limit);
+    // Query filters
+    if (term) filter.term = term;
+    if (academicSession) filter.academicSession = academicSession;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Fetch exams with populated references
     const exams = await Exam.find(filter)
       .populate("class", "grade section")
       .populate("subject", "name")
       .populate("campus", "name")
+      .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit))
-      .sort({ createdAt: -1 });
+      .limit(parseInt(limit));
+
     const totalExams = await Exam.countDocuments(filter);
+
+    // Group exams with IDs included
+    const grouped = {};
+
+    exams.forEach(exam => {
+      const classId = exam.class?._id;
+      const className = `${exam.class?.grade || ""} ${exam.class?.section || ""}`.trim();
+      const subjectId = exam.subject?._id;
+      const subjectName = exam.subject?.name || "Unknown Subject";
+
+      if (!grouped[classId]) grouped[classId] = { _id: classId, name: className, subjects: {} };
+      if (!grouped[classId].subjects[subjectId]) grouped[classId].subjects[subjectId] = { _id: subjectId, name: subjectName, exams: [] };
+
+      grouped[classId].subjects[subjectId].exams.push({
+        _id: exam._id,
+        type: exam.type,
+        totalMarks: exam.totalMarks,
+        term: exam.term,
+        academicSession: exam.academicSession,
+        campus: exam.campus?.name || "",
+      });
+    });
+
+    // Transform into array structure for frontend
+    const result = Object.values(grouped).map(cls => ({
+      _id: cls._id,
+      class: cls.name,
+      subjects: Object.values(cls.subjects).map(sub => ({
+        _id: sub._id,
+        subject: sub.name,
+        exams: sub.exams,
+      })),
+    }));
+
     res.json({
       totalExams,
       page: parseInt(page),
       limit: parseInt(limit),
-      exams,
+      data: result,
     });
+
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: error.message });
   }
 };
+
 
 export const updateExam = async (req, res) => {
   try {
