@@ -11,14 +11,14 @@ export const addScore = async (req, res) => {
   try {
     const { role, _id: userId } = req.user;
     const {
-      studentId,
       classId,
       subjectId,
       campusId,
       examId,
-      marksObtained,
-      remarks,
+      scores, // Array of {studentId, marksObtained}
     } = req.body;
+
+    // Role validation
     if (
       role !== "campus-admin" &&
       role !== "teacher" &&
@@ -28,15 +28,18 @@ export const addScore = async (req, res) => {
         message: "Forbidden: You're not allowed to perform this action",
       });
     }
-    let campusData = {};
+
+    // Campus validation for campus-admin
     if (role === "campus-admin") {
-      campusData = await Campus.findOne({ campusAdmin: userId });
-      if (campusData._id.toString() !== campusId) {
+      const campusData = await Campus.findOne({ campusAdmin: userId });
+      if (!campusData || campusData._id.toString() !== campusId) {
         return res
           .status(403)
           .json({ message: "You can only add scores for your own campus" });
       }
     }
+
+    // Teacher validation
     if (role === "teacher") {
       const filterConditions = [];
 
@@ -92,53 +95,85 @@ export const addScore = async (req, res) => {
       }
     }
 
-    // if (role === 'teacher') {
-    //     const teacherAssign = await TeacherAssignment.findOne({ teacher: userId, isActive: true })
-    //         .populate({
-    //             path: 'assignments',
-    //             match: { isActive: true },
-    //             select: 'campus class subject'
-    //         })
-    //     if (!teacherAssign) {
-    //         return res.status(403).json({ message: "You don't have any active assignments" });
-    //     }
-    //     const assigned = teacherAssign.assignments.some((a) =>
-    //         a.campus.toString() === campusId &&
-    //         a.class.toString() === classId &&
-    //         a.subject.toString() === subjectId
-    //     )
-    //     if (!assigned) {
-    //         return res.status(403).json({ message: "You can only add scores for your assigned campus, class, and subject" });
-    //     }
-    // }
-
-    const existingScore = await Score.findOne({
-      student: studentId,
-      exam: examId,
-      subject: subjectId,
-      campus: campusId,
-      class: classId,
-    });
-    if (existingScore) {
+    // Validate required fields
+    if (!classId || !subjectId || !campusId || !examId || !Array.isArray(scores)) {
       return res.status(400).json({
-        message: "Score for this student in this exam already exists.",
+        message:
+          "Missing required fields: classId, subjectId, campusId, examId, and scores array",
       });
     }
-    const newScore = await Score.create({
-      student: studentId,
-      class: classId,
-      subject: subjectId,
-      campus: campusId,
+
+    // Filter out empty scores and validate
+    const validScores = scores.filter(
+      (s) => s.studentId && (s.marksObtained !== null && s.marksObtained !== undefined)
+    );
+
+    if (validScores.length === 0) {
+      return res.status(400).json({
+        message: "No valid scores provided. Each score must have studentId and marksObtained",
+      });
+    }
+
+    // Check for existing scores before batch insert
+    const studentIds = validScores.map((s) => s.studentId);
+    const existingScores = await Score.find({
+      student: { $in: studentIds },
       exam: examId,
-      marksObtained,
-      remarks,
-      enteredBy: userId,
+      subject: subjectId,
+      class: classId,
     });
+
+    // Separate new and existing scores
+    const newScores = validScores.filter(
+      (s) => !existingScores.some((es) => es.student.toString() === s.studentId)
+    );
+
+    const scoresForUpdate = validScores.filter(
+      (s) => existingScores.some((es) => es.student.toString() === s.studentId)
+    );
+
+    // Update existing scores
+    let updatedCount = 0;
+    for (const scoreData of scoresForUpdate) {
+      await Score.findOneAndUpdate(
+        {
+          student: scoreData.studentId,
+          exam: examId,
+          subject: subjectId,
+          class: classId,
+        },
+        { marksObtained: parseFloat(scoreData.marksObtained) || 0 },
+        { new: true, runValidators: true }
+      );
+      updatedCount++;
+    }
+
+    // Insert new scores
+    let insertedScores = [];
+    if (newScores.length > 0) {
+      const scoresToInsert = newScores.map((s) => ({
+        student: s.studentId,
+        class: classId,
+        subject: subjectId,
+        campus: campusId,
+        exam: examId,
+        marksObtained: parseFloat(s.marksObtained) || 0,
+        enteredBy: userId,
+      }));
+
+      insertedScores = await Score.insertMany(scoresToInsert, {
+        ordered: false,
+      });
+    }
+
     res.status(201).json({
-      message: "Score added successfully",
-      score: newScore,
+      message: `Successfully saved scores. Updated: ${updatedCount}, Created: ${newScores.length}`,
+      count: validScores.length,
+      inserted: insertedScores.length,
+      updated: updatedCount,
     });
   } catch (error) {
+    console.error("Add Score Error:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -193,9 +228,13 @@ export const getScoresByExam = async (req, res) => {
     if (academicSession) examFilter.academicSession = academicSession;
     if (term) examFilter.term = term;
     if (examType) examFilter.type = examType;
+    examFilter.class = classId; // Add class filter
 
-    const exams = await Exam.find(examFilter).select("_id type term totalMarks");
+    const exams = await Exam.find(examFilter).select("_id type term totalMarks campus");
     if (exams.length > 0) filter.exam = { $in: exams.map(e => e._id) };
+
+    // Get campusId from first exam - convert to string
+    const campusId = exams.length > 0 ? exams[0].campus?.toString() : null;
 
     // Fetch all students in the class
     const allStudents = await StudentEnrollment.find({ class: classId, isActive: true })
@@ -240,6 +279,7 @@ export const getScoresByExam = async (req, res) => {
       totalScores: mergedScores.length,
       page: parseInt(page),
       limit: parseInt(limit),
+      campusId: campusId || null,
       scores: paginatedScores,
     });
   } catch (error) {
