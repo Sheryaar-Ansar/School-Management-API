@@ -29,6 +29,20 @@ export const createCampus = async (req, res) => {
     res.status(400).json({ error: error });
   }
 };
+export const getAssignedCampusAdmins = async (req, res) => {
+  try {
+    const admins = await Campus.find(
+      { isActive: true },
+      { campusAdmin: 1, _id: 0 }
+    );
+
+    const assignedAdminIds = admins.map(c => c.campusAdmin);
+
+    res.json(assignedAdminIds);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 export const getAllCampuses = async (req, res) => {
   try {
@@ -154,14 +168,20 @@ export const getAllCampuses = async (req, res) => {
   }
 };
 
+
 export const getCampusById = async (req, res) => {
   try {
     const { id } = req.params;
 
     const campus = await Campus.aggregate([
-      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      // 1️⃣ Match Campus
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(id),
+        },
+      },
 
-      // Campus Admin
+      // 2️⃣ Campus Admin
       {
         $lookup: {
           from: "users",
@@ -170,19 +190,89 @@ export const getCampusById = async (req, res) => {
           as: "campusAdmin",
         },
       },
-      { $unwind: { path: "$campusAdmin", preserveNullAndEmptyArrays: true } },
+      {
+        $unwind: {
+          path: "$campusAdmin",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
 
-      // Class Count
+      // 3️⃣ Classes with Teacher & Student Count
       {
         $lookup: {
           from: "classes",
-          localField: "_id",
-          foreignField: "campus",
+          let: { campusId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$campus", "$$campusId"] },
+              },
+            },
+
+            // Class Teacher
+            {
+              $lookup: {
+                from: "users",
+                localField: "classTeacher",
+                foreignField: "_id",
+                as: "classTeacher",
+              },
+            },
+            {
+              $unwind: {
+                path: "$classTeacher",
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+
+            // Students Count per Class
+            {
+              $lookup: {
+                from: "studentenrollments",
+                localField: "_id",
+                foreignField: "class",
+                as: "students",
+              },
+            },
+
+            // Add Computed Fields
+            {
+              $addFields: {
+                studentCount: { $size: "$students" },
+                className: {
+                  $concat: [
+                    { $toString: "$grade" },
+                    "$section",
+                  ],
+                },
+              },
+            },
+
+            // Shape Class Object
+            {
+              $project: {
+                _id: 1,
+                grade: 1,
+                section: 1,
+                className: 1,
+                studentCount: 1,
+                classTeacher: {
+                  _id: "$classTeacher._id",
+                  name: "$classTeacher.name",
+                },
+              },
+            },
+
+            // Sort: 6A, 6B, 7A...
+            {
+              $sort: { grade: 1, section: 1 },
+            },
+          ],
           as: "classes",
         },
       },
 
-      // Teacher Count (via TeacherAssignment → Assignment → campus)
+      // 4️⃣ Teacher Count (unique teachers assigned in this campus)
       {
         $lookup: {
           from: "teacherassignments",
@@ -200,16 +290,22 @@ export const getCampusById = async (req, res) => {
             { $unwind: "$assignData" },
             {
               $match: {
-                $expr: { $eq: ["$assignData.campus", "$$campusId"] },
+                $expr: {
+                  $eq: ["$assignData.campus", "$$campusId"],
+                },
               },
             },
-            { $group: { _id: "$teacher" } },
+            {
+              $group: {
+                _id: "$teacher",
+              },
+            },
           ],
           as: "teacherAssignments",
         },
       },
 
-      // Student Count
+      // 5️⃣ Student Count (Campus Wide)
       {
         $lookup: {
           from: "studentenrollments",
@@ -219,6 +315,7 @@ export const getCampusById = async (req, res) => {
         },
       },
 
+      // 6️⃣ Counts
       {
         $addFields: {
           classCount: { $size: "$classes" },
@@ -227,6 +324,7 @@ export const getCampusById = async (req, res) => {
         },
       },
 
+      // 7️⃣ Final Response Shape
       {
         $project: {
           _id: 1,
@@ -235,6 +333,7 @@ export const getCampusById = async (req, res) => {
           classCount: 1,
           teacherCount: 1,
           studentCount: 1,
+          classes: 1,
           campusAdmin: {
             _id: "$campusAdmin._id",
             name: "$campusAdmin.name",
@@ -250,7 +349,7 @@ export const getCampusById = async (req, res) => {
     }
 
     logger.info(`Fetched campus details for ID: ${id}`);
-    res.json(campus[0]);
+    res.status(200).json(campus[0]);
   } catch (error) {
     logger.error(
       `Error fetching campus by ID (${req.params.id}): ${error.message}`
@@ -259,6 +358,7 @@ export const getCampusById = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 export const updateCampusDetailsById = async (req, res) => {
   try {
