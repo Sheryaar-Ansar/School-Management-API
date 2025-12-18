@@ -342,8 +342,8 @@ const seed = async () => {
       { type: "Examination", totalMarks: 100 },
       { type: "Assessment 1", totalMarks: 20 },
       { type: "Assessment 2", totalMarks: 20 },
-      { type: "Classwork", totalMarks: 5 },
-      { type: "Homework", totalMarks: 5 },
+      { type: "Class work", totalMarks: 5 },
+      { type: "HW work", totalMarks: 5 },
     ];
     for (const cls of classes) {
       const clsSubjects = await Subject.find({ _id: { $in: cls.subjects } });
