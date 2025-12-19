@@ -268,10 +268,10 @@ export const getAllClasses = async (req, res) => {
       { $skip: skip },
       { $limit: Number(limit) }
     ]);
-
+    const totalCount = await Class.countDocuments()
     res.json({
       role,
-      count: classes.length,
+      count: totalCount,
       page: Number(page),
       limit: Number(limit),
       data: classes
