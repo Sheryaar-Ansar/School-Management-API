@@ -66,7 +66,10 @@ app.use('/api/ai', aiRoutes)
 
 app.use(errorHandler)
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  logger.info(`Server running on localhost:${port}`);
-});
+if (process.env.NODE_ENV !== "production") {
+  app.listen(port, () => {
+    logger.info(`Server running on http://localhost:${port}`);
+  });
+}
+
+export default app;
